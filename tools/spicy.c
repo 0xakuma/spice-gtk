@@ -121,6 +121,7 @@ static void del_window(spice_connection *conn, SpiceWindow *win);
 
 /* options */
 static gboolean fullscreen = false;
+static gboolean hide_menu_bar = false;
 static gboolean version = false;
 static char *spicy_title = NULL;
 /* globals */
@@ -511,8 +512,9 @@ static gboolean window_state_cb(GtkWidget *widget, GdkEventWindowState *event,
         } else {
             gboolean state;
             GtkAction *toggle;
-
-            gtk_widget_show(win->menubar);
+            if (!hide_menu_bar) {
+                gtk_widget_show(win->menubar);
+            }
             toggle = gtk_action_group_get_action(win->ag, "Toolbar");
             state = gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(toggle));
             gtk_widget_set_visible(win->toolbar, state);
@@ -1121,7 +1123,9 @@ static SpiceWindow *create_spice_window(spice_connection *conn, SpiceChannel *ch
         g_error_free(err);
         exit(1);
     }
-    win->menubar = gtk_ui_manager_get_widget(win->ui, "/MainMenu");
+    if (!hide_menu_bar) {
+        win->menubar = gtk_ui_manager_get_widget(win->ui, "/MainMenu");
+    }
     win->toolbar = gtk_ui_manager_get_widget(win->ui, "/ToolBar");
 
     /* recent menu */
@@ -1924,6 +1928,11 @@ static GOptionEntry cmd_entries[] = {
         .arg              = G_OPTION_ARG_NONE,
         .arg_data         = &fullscreen,
         .description      = "Open in full screen mode",
+    },{
+        .long_name        = "hide-menu-bar",
+        .arg              = G_OPTION_ARG_NONE,
+        .arg_data         = &hide_menu_bar,
+        .description      = "Hide menu bar",
     },{
         .long_name        = "version",
         .arg              = G_OPTION_ARG_NONE,
