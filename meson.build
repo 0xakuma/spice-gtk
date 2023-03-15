@@ -345,7 +345,6 @@ summary_info += {'coroutine': spice_gtk_coroutine}
 spice_gtk_has_introspection = false
 d = dependency('gobject-introspection-1.0', version : '>= 0.94', required : get_option('introspection'))
 if d.found()
-  spice_glib_deps += d
   spice_gtk_has_introspection = true
 endif
 summary_info += {'introspection': spice_gtk_has_introspection}
