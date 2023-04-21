@@ -214,7 +214,7 @@ static int compare_dev_list_fire_callback(SpiceUsbBackend *be,
     return num_changed;
 }
 
-static LRESULT subclass_proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
+static LRESULT CALLBACK subclass_proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
                              UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
     SpiceUsbBackend *be = (SpiceUsbBackend *)dwRefData;
