@@ -181,14 +181,19 @@ endif
 #
 
 # version-script
+test_syms_path = meson.current_source_dir() / 'test-map-file'
+test_version_script = '-Wl,--version-script=@0@'.format(test_syms_path)
+spice_has_version_script = compiler.has_link_argument(test_version_script)
+
 spice_client_glib_syms = files('map-file')
 spice_client_glib_syms_path = meson.current_source_dir() / 'map-file'
 spice_gtk_version_script = '-Wl,--version-script=@0@'.format(spice_client_glib_syms_path)
-spice_gtk_has_version_script = compiler.has_link_argument(spice_gtk_version_script)
-if not spice_gtk_has_version_script
-  spice_client_glib_syms = files('spice-glib-sym-file')
-  spice_client_glib_syms_path = meson.current_source_dir() / 'spice-glib-sym-file'
-  spice_gtk_version_script = ['-export-symbols', spice_client_glib_syms_path]
+if not spice_has_version_script
+  if host_machine.system() == 'linux'
+    error('Version scripts should be supported on Linux')
+  endif
+  spice_client_glib_syms = []
+  spice_gtk_version_script = []
 endif
 
 # soversion
@@ -373,11 +378,6 @@ if spice_gtk_has_gtk
   # libspice-client-gtk.so
   #
   spice_client_gtk_syms = spice_client_glib_syms
-  if not spice_gtk_has_version_script
-    spice_client_gtk_syms = files('spice-gtk-sym-file')
-    spice_client_gtk_syms_path = meson.current_source_dir() / 'spice-gtk-sym-file'
-    spice_gtk_version_script = ['-export-symbols', spice_client_gtk_syms_path]
-  endif
 
   # soversion
   # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
