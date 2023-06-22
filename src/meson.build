@@ -43,7 +43,7 @@ foreach version : versions
 endforeach
 
 versions = '''2 3 4 5 6 7 8 9 10 11 13 14 15 17 19
-   20 24 27 30 31 32 33 34 35 36 38 39 40'''.split()
+   20 24 27 30 31 32 33 34 35 36 38 39 40 43'''.split()
 foreach version: versions
   script = '''@2@
 #if SPICE_GTK_VERSION_MAX_ALLOWED < SPICE_GTK_VERSION_@0@_@1@
@@ -131,6 +131,7 @@ spice_client_glib_introspection_sources = [
   'spice-option.c',
   'spice-session.c',
   'spice-util.c',
+  'spice-util-glib.c',
   'usb-device-manager.c',
 ]
 

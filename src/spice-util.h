@@ -21,20 +21,37 @@
 
 G_BEGIN_DECLS
 
-SPICE_GTK_AVAILABLE_IN_ALL
+SPICE_GTK_DEPRECATED_IN_0_43_FOR(spice_glib_set_debug)
 void spice_util_set_debug(gboolean enabled);
-SPICE_GTK_AVAILABLE_IN_ALL
+SPICE_GTK_DEPRECATED_IN_0_43_FOR(spice_glib_get_debug)
 gboolean spice_util_get_debug(void);
-SPICE_GTK_AVAILABLE_IN_ALL
+SPICE_GTK_DEPRECATED_IN_0_43_FOR(spice_glib_get_version_string)
 const gchar *spice_util_get_version_string(void);
-SPICE_GTK_AVAILABLE_IN_0_8
+
+SPICE_GTK_AVAILABLE_IN_0_43
+void spice_glib_set_debug(gboolean enabled);
+SPICE_GTK_AVAILABLE_IN_0_43
+gboolean spice_glib_get_debug(void);
+SPICE_GTK_AVAILABLE_IN_0_43
+const gchar *spice_glib_get_version_string(void);
+
+SPICE_GTK_DEPRECATED_IN_0_43_FOR(spice_glib_signal_connect_object)
 gulong spice_g_signal_connect_object(gpointer instance,
                                      const gchar *detailed_signal,
                                      GCallback c_handler,
                                      gpointer gobject,
                                      GConnectFlags connect_flags);
-SPICE_GTK_AVAILABLE_IN_0_11
+SPICE_GTK_DEPRECATED_IN_0_43_FOR(spice_glib_uuid_to_string)
 gchar* spice_uuid_to_string(const guint8 uuid[16]);
+
+SPICE_GTK_AVAILABLE_IN_0_43
+gulong spice_glib_signal_connect_object(gpointer instance,
+                                     const gchar *detailed_signal,
+                                     GCallback c_handler,
+                                     gpointer gobject,
+                                     GConnectFlags connect_flags);
+SPICE_GTK_AVAILABLE_IN_0_43
+gchar* spice_glib_uuid_to_string(const guint8 uuid[16]);
 
 #define SPICE_DEBUG(fmt, ...)                                   \
     do {                                                        \
