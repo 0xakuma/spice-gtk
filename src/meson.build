@@ -185,14 +185,20 @@ test_syms_path = meson.current_source_dir() / 'test-map-file'
 test_version_script = '-Wl,--version-script=@0@'.format(test_syms_path)
 spice_has_version_script = compiler.has_link_argument(test_version_script)
 
-spice_client_glib_syms = files('map-file')
-spice_client_glib_syms_path = meson.current_source_dir() / 'map-file'
-spice_gtk_version_script = '-Wl,--version-script=@0@'.format(spice_client_glib_syms_path)
-if not spice_has_version_script
+if spice_has_version_script
+  spice_client_glib_syms = files('map-file-glib')
+  spice_client_gtk_syms = files('map-file-gtk')
+  spice_client_glib_syms_path = meson.current_source_dir() / 'map-file-glib'
+  spice_client_gtk_syms_path = meson.current_source_dir() / 'map-file-gtk'
+  spice_glib_version_script = '-Wl,--version-script=@0@'.format(spice_client_glib_syms_path)
+  spice_gtk_version_script = '-Wl,--version-script=@0@'.format(spice_client_gtk_syms_path)
+else
   if host_machine.system() == 'linux'
     error('Version scripts should be supported on Linux')
   endif
   spice_client_glib_syms = []
+  spice_client_gtk_syms = []
+  spice_glib_version_script = []
   spice_gtk_version_script = []
 endif
 
@@ -210,7 +216,7 @@ spice_client_glib_lib = library('spice-client-glib-2.0', spice_client_glib_sourc
                                 version : spice_client_glib_so_version,
                                 install : true,
                                 include_directories : spice_gtk_include,
-                                link_args : [spice_gtk_version_script],
+                                link_args : [spice_glib_version_script],
                                 link_depends : spice_client_glib_syms,
                                 dependencies : spice_glib_deps)
 
@@ -377,7 +383,6 @@ if spice_gtk_has_gtk
   #
   # libspice-client-gtk.so
   #
-  spice_client_gtk_syms = spice_client_glib_syms
 
   # soversion
   # http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
