@@ -611,7 +611,7 @@ void spice_inputs_channel_key_release(SpiceInputsChannel *channel, guint scancod
  *
  * Press and release a key event atomically (in the same message).
  *
- * Since: 0.13
+ * Since: 0.14
  *
  * Deprecated: 0.35
  **/

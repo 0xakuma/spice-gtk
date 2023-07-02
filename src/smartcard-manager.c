@@ -638,7 +638,7 @@ GList *spice_smartcard_manager_get_readers(SpiceSmartcardManager *manager)
  * Returns: TRUE if smartcard insertion was successfully simulated, FALSE
  * if this failed, or if software smartcard support isn't enabled.
  *
- * Since: 0.20
+ * Since: 0.7
  */
 gboolean spice_smartcard_manager_insert_card(SpiceSmartcardManager *manager)
 {
@@ -662,7 +662,7 @@ gboolean spice_smartcard_manager_insert_card(SpiceSmartcardManager *manager)
  * Returns: TRUE if smartcard removal was successfully simulated, FALSE
  * if this failed, or if software smartcard support isn't enabled.
  *
- * Since: 0.20
+ * Since: 0.7
  */
 gboolean spice_smartcard_manager_remove_card(SpiceSmartcardManager *manager)
 {

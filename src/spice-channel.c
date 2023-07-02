@@ -2193,7 +2193,7 @@ static const char *to_string[] = {
  * Convert a channel-type property value to a string.
  *
  * Returns: string representation of @type.
- * Since: 0.20
+ * Since: 0.7
  **/
 const gchar* spice_channel_type_to_string(gint type)
 {
