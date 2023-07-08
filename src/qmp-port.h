@@ -88,30 +88,39 @@ typedef struct _SpiceQmpStatus {
     gchar *status;
 } SpiceQmpStatus;
 
+SPICE_GTK_AVAILABLE_IN_0_36
 GType spice_qmp_port_get_type(void);
 
+SPICE_GTK_AVAILABLE_IN_0_36
 SpiceQmpPort *spice_qmp_port_get(SpicePortChannel *channel);
 
+SPICE_GTK_AVAILABLE_IN_0_36
 void spice_qmp_port_vm_action_async(SpiceQmpPort *self,
                                     SpiceQmpPortVmAction action,
                                     GCancellable *cancellable,
                                     GAsyncReadyCallback callback,
                                     gpointer user_data);
 
+SPICE_GTK_AVAILABLE_IN_0_36
 gboolean spice_qmp_port_vm_action_finish(SpiceQmpPort *self,
                                          GAsyncResult *result,
                                          GError **error);
 
+SPICE_GTK_AVAILABLE_IN_0_36
 GType spice_qmp_status_get_type(void);
 
+SPICE_GTK_AVAILABLE_IN_0_36
 SpiceQmpStatus *spice_qmp_status_ref(SpiceQmpStatus *status);
+SPICE_GTK_AVAILABLE_IN_0_36
 void spice_qmp_status_unref(SpiceQmpStatus *status);
 
+SPICE_GTK_AVAILABLE_IN_0_36
 void spice_qmp_port_query_status_async(SpiceQmpPort *self,
                                        GCancellable *cancellable,
                                        GAsyncReadyCallback callback,
                                        gpointer user_data);
 
+SPICE_GTK_AVAILABLE_IN_0_36
 SpiceQmpStatus *spice_qmp_port_query_status_finish(SpiceQmpPort *self,
                                                    GAsyncResult *result,
                                                    GError **error);

@@ -71,12 +71,14 @@ struct _SpiceRecordChannelClass {
     /* Do not add fields to this struct */
 };
 
+SPICE_GTK_AVAILABLE_IN_ALL
 GType	        spice_record_channel_get_type(void);
+SPICE_GTK_AVAILABLE_IN_0_35
 void            spice_record_channel_send_data(SpiceRecordChannel *channel, gpointer data,
                                                gsize bytes, guint32 time);
 
 #ifndef SPICE_DISABLE_DEPRECATED
-G_DEPRECATED_FOR(spice_record_channel_send_data)
+SPICE_GTK_DEPRECATED_IN_0_35_FOR(spice_record_channel_send_data)
 void            spice_record_send_data(SpiceRecordChannel *channel, gpointer data,
                                        gsize bytes, guint32 time);
 #endif

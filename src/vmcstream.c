@@ -18,6 +18,7 @@
 
 #include <string.h>
 
+#include "spice-version.h"
 #include "vmcstream.h"
 #include "spice-channel-priv.h"
 #include "gio-coroutine.h"

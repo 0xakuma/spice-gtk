@@ -34,6 +34,7 @@
 #endif
 #include "usbredirhost.h"
 #include "usbredirparser.h"
+#include "spice-version.h"
 #include "spice-util.h"
 #include "usb-backend.h"
 #include "usb-emulation.h"

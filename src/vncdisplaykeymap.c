@@ -14,7 +14,7 @@
 #include <gdk/gdkkeysyms.h>
 #include "vncdisplaykeymap.h"
 
-#include "spice-util.h"
+#include "spice-common.h"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "vnc-keymap"

@@ -21,14 +21,19 @@
 
 G_BEGIN_DECLS
 
+SPICE_GTK_AVAILABLE_IN_ALL
 void spice_util_set_debug(gboolean enabled);
+SPICE_GTK_AVAILABLE_IN_ALL
 gboolean spice_util_get_debug(void);
+SPICE_GTK_AVAILABLE_IN_ALL
 const gchar *spice_util_get_version_string(void);
+SPICE_GTK_AVAILABLE_IN_0_8
 gulong spice_g_signal_connect_object(gpointer instance,
                                      const gchar *detailed_signal,
                                      GCallback c_handler,
                                      gpointer gobject,
                                      GConnectFlags connect_flags);
+SPICE_GTK_AVAILABLE_IN_0_11
 gchar* spice_uuid_to_string(const guint8 uuid[16]);
 
 #define SPICE_DEBUG(fmt, ...)                                   \

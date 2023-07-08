@@ -48,18 +48,30 @@ typedef struct _SpiceURI SpiceURI;
 typedef struct _SpiceURIClass SpiceURIClass;
 typedef struct _SpiceURIPrivate SpiceURIPrivate;
 
+SPICE_GTK_AVAILABLE_IN_0_24
 GType spice_uri_get_type(void) G_GNUC_CONST;
 
+SPICE_GTK_AVAILABLE_IN_0_24
 const gchar* spice_uri_get_scheme(SpiceURI* uri);
+SPICE_GTK_AVAILABLE_IN_0_24
 void spice_uri_set_scheme(SpiceURI* uri, const gchar* scheme);
+SPICE_GTK_AVAILABLE_IN_0_24
 const gchar* spice_uri_get_hostname(SpiceURI* uri);
+SPICE_GTK_AVAILABLE_IN_0_24
 void spice_uri_set_hostname(SpiceURI* uri, const gchar* hostname);
+SPICE_GTK_AVAILABLE_IN_0_24
 guint spice_uri_get_port(SpiceURI* uri);
+SPICE_GTK_AVAILABLE_IN_0_24
 void spice_uri_set_port(SpiceURI* uri, guint port);
+SPICE_GTK_AVAILABLE_IN_0_24
 gchar *spice_uri_to_string(SpiceURI* uri);
+SPICE_GTK_AVAILABLE_IN_0_24
 const gchar* spice_uri_get_user(SpiceURI* uri);
+SPICE_GTK_AVAILABLE_IN_0_24
 void spice_uri_set_user(SpiceURI* uri, const gchar* user);
+SPICE_GTK_AVAILABLE_IN_0_24
 const gchar* spice_uri_get_password(SpiceURI* uri);
+SPICE_GTK_AVAILABLE_IN_0_24
 void spice_uri_set_password(SpiceURI* uri, const gchar* password);
 
 G_END_DECLS

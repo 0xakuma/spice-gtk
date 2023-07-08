@@ -26,7 +26,9 @@
 
 G_BEGIN_DECLS
 
+SPICE_GTK_AVAILABLE_IN_0_7
 GOptionGroup* spice_get_option_group(void);
+SPICE_GTK_AVAILABLE_IN_0_7
 void spice_set_session_option(SpiceSession *session);
 
 G_END_DECLS

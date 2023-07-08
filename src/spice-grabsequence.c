@@ -23,6 +23,7 @@
 #include <string.h>
 #include <gdk/gdk.h>
 
+#include "spice-version.h"
 #include "spice-grabsequence.h"
 #include "spice-grabsequence-priv.h"
 

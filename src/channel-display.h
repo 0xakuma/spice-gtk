@@ -143,32 +143,41 @@ struct _SpiceDisplayChannelClass {
     /*< private >*/
 };
 
+SPICE_GTK_AVAILABLE_IN_ALL
 GType	        spice_display_channel_get_type(void);
+SPICE_GTK_AVAILABLE_IN_0_35
 gboolean        spice_display_channel_get_primary(SpiceChannel *channel, guint32 surface_id,
                                                   SpiceDisplayPrimary *primary);
 
+SPICE_GTK_AVAILABLE_IN_0_35
 void spice_display_channel_change_preferred_compression(SpiceChannel *channel, gint compression);
+SPICE_GTK_DEPRECATED_IN_0_38_FOR(spice_display_channel_change_preferred_video_codec_types)
 void spice_display_channel_change_preferred_video_codec_type(SpiceChannel *channel, gint codec_type);
+SPICE_GTK_AVAILABLE_IN_0_38
 gboolean spice_display_channel_change_preferred_video_codec_types(SpiceChannel *channel, const gint *codecs,
                                                                   gsize ncodecs, GError **err);
 
+SPICE_GTK_AVAILABLE_IN_0_31
 GType           spice_gl_scanout_get_type     (void) G_GNUC_CONST;
+SPICE_GTK_AVAILABLE_IN_0_31
 void            spice_gl_scanout_free         (SpiceGlScanout *scanout);
 
+SPICE_GTK_AVAILABLE_IN_0_35
 const SpiceGlScanout* spice_display_channel_get_gl_scanout(SpiceDisplayChannel *channel);
+SPICE_GTK_AVAILABLE_IN_0_35
 void spice_display_channel_gl_draw_done(SpiceDisplayChannel *channel);
 
 #ifndef SPICE_DISABLE_DEPRECATED
-G_DEPRECATED_FOR(spice_display_channel_change_preferred_compression)
+SPICE_GTK_DEPRECATED_IN_0_35_FOR(spice_display_channel_change_preferred_compression)
 void spice_display_change_preferred_compression(SpiceChannel *channel, gint compression);
-G_DEPRECATED_FOR(spice_display_channel_change_preferred_video_codec_type)
+SPICE_GTK_DEPRECATED_IN_0_35_FOR(spice_display_channel_change_preferred_video_codec_type)
 void spice_display_change_preferred_video_codec_type(SpiceChannel *channel, gint codec_type);
-G_DEPRECATED_FOR(spice_display_channel_get_gl_scanout)
+SPICE_GTK_DEPRECATED_IN_0_35_FOR(spice_display_channel_get_gl_scanout)
 const SpiceGlScanout* spice_display_get_gl_scanout(SpiceDisplayChannel *channel);
-G_DEPRECATED_FOR(spice_display_channel_get_primary)
+SPICE_GTK_DEPRECATED_IN_0_35_FOR(spice_display_channel_get_primary)
 gboolean spice_display_get_primary(SpiceChannel *channel, guint32 surface_id,
                                    SpiceDisplayPrimary *primary);
-G_DEPRECATED_FOR(spice_display_channel_gl_draw_done)
+SPICE_GTK_DEPRECATED_IN_0_35_FOR(spice_display_channel_gl_draw_done)
 void spice_display_gl_draw_done(SpiceDisplayChannel *channel);
 #endif
 

@@ -104,16 +104,26 @@ struct _SpiceSessionClass
     gpointer  _spice_reserved[10];
 };
 
+SPICE_GTK_AVAILABLE_IN_ALL
 GType spice_session_get_type(void);
 
+SPICE_GTK_AVAILABLE_IN_ALL
 SpiceSession *spice_session_new(void);
+SPICE_GTK_AVAILABLE_IN_ALL
 gboolean spice_session_connect(SpiceSession *session);
+SPICE_GTK_AVAILABLE_IN_0_2
 gboolean spice_session_open_fd(SpiceSession *session, int fd);
+SPICE_GTK_AVAILABLE_IN_ALL
 void spice_session_disconnect(SpiceSession *session);
+SPICE_GTK_AVAILABLE_IN_ALL
 GList *spice_session_get_channels(SpiceSession *session);
+SPICE_GTK_AVAILABLE_IN_0_8
 gboolean spice_session_has_channel_type(SpiceSession *session, gint type);
+SPICE_GTK_AVAILABLE_IN_0_8
 gboolean spice_session_get_read_only(SpiceSession *session);
+SPICE_GTK_AVAILABLE_IN_0_24
 SpiceURI *spice_session_get_proxy_uri(SpiceSession *session);
+SPICE_GTK_AVAILABLE_IN_0_27
 gboolean spice_session_is_for_migration(SpiceSession *session);
 
 G_END_DECLS

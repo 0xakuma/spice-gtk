@@ -29,4 +29,5 @@
 #include "common/messages.h"
 #include "common/marshaller.h"
 
+#include "spice-version.h"
 #include "spice-util.h"

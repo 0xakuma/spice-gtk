@@ -29,11 +29,11 @@
 
 /* spice/gtk */
 #include "spice-types.h"
+#include "spice-version.h"
 #include "spice-session.h"
 #include "spice-channel.h"
 #include "spice-option.h"
 #include "spice-uri.h"
-#include "spice-version.h"
 
 #include "channel-main.h"
 #include "channel-display.h"
@@ -89,6 +89,7 @@ typedef enum
 #define SPICE_CLIENT_USB_DEVICE_LOST SPICE_CLIENT_ERROR_USB_DEVICE_LOST
 #endif
 
+SPICE_GTK_AVAILABLE_IN_0_7
 GQuark spice_client_error_quark(void);
 
 G_END_DECLS

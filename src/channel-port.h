@@ -63,29 +63,33 @@ struct _SpicePortChannelClass {
     /* Do not add fields to this struct */
 };
 
+SPICE_GTK_AVAILABLE_IN_0_15
 GType spice_port_channel_get_type(void);
 
+SPICE_GTK_AVAILABLE_IN_0_35
 void spice_port_channel_write_async(SpicePortChannel *port,
                                     const void *buffer, gsize count,
                                     GCancellable *cancellable,
                                     GAsyncReadyCallback callback,
                                     gpointer user_data);
+SPICE_GTK_AVAILABLE_IN_0_35
 gssize spice_port_channel_write_finish(SpicePortChannel *port,
                                        GAsyncResult *result, GError **error);
+SPICE_GTK_AVAILABLE_IN_0_35
 void spice_port_channel_event(SpicePortChannel *port, guint8 event);
 
 
 #ifndef SPICE_DISABLE_DEPRECATED
-G_DEPRECATED_FOR(spice_port_channel_write_async)
+SPICE_GTK_DEPRECATED_IN_0_35_FOR(spice_port_channel_write_async)
 void spice_port_write_async(SpicePortChannel *port,
                             const void *buffer, gsize count,
                             GCancellable *cancellable,
                             GAsyncReadyCallback callback,
                             gpointer user_data);
-G_DEPRECATED_FOR(spice_port_channel_write_finish)
+SPICE_GTK_DEPRECATED_IN_0_35_FOR(spice_port_channel_write_finish)
 gssize spice_port_write_finish(SpicePortChannel *port,
                                GAsyncResult *result, GError **error);
-G_DEPRECATED_FOR(spice_port_channel_event)
+SPICE_GTK_DEPRECATED_IN_0_35_FOR(spice_port_channel_event)
 void spice_port_event(SpicePortChannel *port, guint8 event);
 #endif
 

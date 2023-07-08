@@ -50,7 +50,9 @@ typedef struct _SpiceUsbDeviceWidget SpiceUsbDeviceWidget;
 typedef struct _SpiceUsbDeviceWidgetClass SpiceUsbDeviceWidgetClass;
 typedef struct _SpiceUsbDeviceWidgetPrivate SpiceUsbDeviceWidgetPrivate;
 
+SPICE_GTK_AVAILABLE_IN_0_9
 GType spice_usb_device_widget_get_type(void);
+SPICE_GTK_AVAILABLE_IN_0_9
 GtkWidget *spice_usb_device_widget_new(SpiceSession    *session,
                                        const gchar     *device_format_string);
 

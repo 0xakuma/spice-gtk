@@ -96,62 +96,79 @@ struct _SpiceUsbDeviceManagerClass
     gpointer _spice_reserved[10];
 };
 
+SPICE_GTK_AVAILABLE_IN_0_8
 GType spice_usb_device_get_type(void);
+SPICE_GTK_AVAILABLE_IN_0_8
 GType spice_usb_device_manager_get_type(void);
 
+SPICE_GTK_AVAILABLE_IN_0_8
 gchar *spice_usb_device_get_description(SpiceUsbDevice *device, const gchar *format);
+SPICE_GTK_AVAILABLE_IN_0_27
 gconstpointer spice_usb_device_get_libusb_device(const SpiceUsbDevice *device);
 
+SPICE_GTK_AVAILABLE_IN_0_8
 SpiceUsbDeviceManager *spice_usb_device_manager_get(SpiceSession *session,
                                                     GError **err);
 
+SPICE_GTK_AVAILABLE_IN_0_8
 GPtrArray *spice_usb_device_manager_get_devices(SpiceUsbDeviceManager *manager);
+SPICE_GTK_AVAILABLE_IN_0_20
 GPtrArray* spice_usb_device_manager_get_devices_with_filter(SpiceUsbDeviceManager *manager,
                                                             const gchar *filter);
 
+SPICE_GTK_AVAILABLE_IN_0_8
 gboolean spice_usb_device_manager_is_device_connected(SpiceUsbDeviceManager *manager,
                                                       SpiceUsbDevice *device);
+SPICE_GTK_AVAILABLE_IN_0_8
 void spice_usb_device_manager_connect_device_async(SpiceUsbDeviceManager *manager,
                                                    SpiceUsbDevice *device,
                                                    GCancellable *cancellable,
                                                    GAsyncReadyCallback callback,
                                                    gpointer user_data);
 
+SPICE_GTK_AVAILABLE_IN_0_32
 void spice_usb_device_manager_disconnect_device_async(SpiceUsbDeviceManager *manager,
                                                       SpiceUsbDevice *device,
                                                       GCancellable *cancellable,
                                                       GAsyncReadyCallback callback,
                                                       gpointer user_data);
 
+SPICE_GTK_AVAILABLE_IN_0_8
 gboolean spice_usb_device_manager_connect_device_finish(SpiceUsbDeviceManager *manager,
                                                         GAsyncResult *res,
                                                         GError **err);
 
+SPICE_GTK_AVAILABLE_IN_0_32
 gboolean spice_usb_device_manager_disconnect_device_finish(SpiceUsbDeviceManager *manager,
                                                            GAsyncResult *res,
                                                            GError **err);
 
 #ifndef SPICE_DISABLE_DEPRECATED
-G_DEPRECATED_FOR(spice_usb_device_manager_disconnect_device_async)
+SPICE_GTK_DEPRECATED_IN_0_32_FOR(spice_usb_device_manager_disconnect_device_async)
 void spice_usb_device_manager_disconnect_device(SpiceUsbDeviceManager *manager,
                                                 SpiceUsbDevice *device);
 #endif
 
+SPICE_GTK_AVAILABLE_IN_0_10
 gboolean
 spice_usb_device_manager_can_redirect_device(SpiceUsbDeviceManager *manager,
                                              SpiceUsbDevice *device,
                                              GError **err);
 
+SPICE_GTK_AVAILABLE_IN_0_32
 gboolean spice_usb_device_manager_is_redirecting(SpiceUsbDeviceManager *manager);
 
+SPICE_GTK_AVAILABLE_IN_0_38
 gboolean
 spice_usb_device_manager_create_shared_cd_device(SpiceUsbDeviceManager *manager,
                                                  gchar *filename,
                                                  GError **err);
+SPICE_GTK_AVAILABLE_IN_0_38
 gboolean
 spice_usb_device_manager_is_device_shared_cd(SpiceUsbDeviceManager *manager,
                                              SpiceUsbDevice *device);
 
+SPICE_GTK_AVAILABLE_IN_0_40
 SpiceUsbDevice *
 spice_usb_device_manager_allocate_device_for_file_descriptor(SpiceUsbDeviceManager *manager,
                                                              int file_descriptor,

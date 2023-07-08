@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #define __SPICE_CLIENT_H_INSIDE__
+#include "spice-version.h"
 #include "spice-util-priv.h"
 
 enum {

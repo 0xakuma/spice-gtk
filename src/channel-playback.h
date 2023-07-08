@@ -71,7 +71,9 @@ struct _SpicePlaybackChannelClass {
     /* Do not add fields to this struct */
 };
 
+SPICE_GTK_AVAILABLE_IN_ALL
 GType           spice_playback_channel_get_type(void);
+SPICE_GTK_AVAILABLE_IN_0_4
 void            spice_playback_channel_set_delay(SpicePlaybackChannel *channel, guint32 delay_ms);
 
 G_END_DECLS

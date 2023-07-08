@@ -64,6 +64,7 @@ struct _SpiceWebdavChannelClass {
     /* Do not add fields to this struct */
 };
 
+SPICE_GTK_AVAILABLE_IN_0_24
 GType spice_webdav_channel_get_type(void);
 
 G_END_DECLS

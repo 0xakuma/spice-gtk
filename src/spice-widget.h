@@ -68,17 +68,26 @@ typedef enum
 	SPICE_DISPLAY_KEY_EVENT_CLICK = 3,
 } SpiceDisplayKeyEvent;
 
+SPICE_GTK_AVAILABLE_IN_ALL
 GType	        spice_display_get_type(void);
 
+SPICE_GTK_AVAILABLE_IN_ALL
 SpiceDisplay* spice_display_new(SpiceSession *session, int channel_id);
+SPICE_GTK_AVAILABLE_IN_0_13
 SpiceDisplay* spice_display_new_with_monitor(SpiceSession *session, gint channel_id, gint monitor_id);
 
+SPICE_GTK_AVAILABLE_IN_0_40
 void spice_display_keyboard_ungrab(SpiceDisplay *display);
+SPICE_GTK_AVAILABLE_IN_ALL
 void spice_display_mouse_ungrab(SpiceDisplay *display);
+SPICE_GTK_AVAILABLE_IN_ALL
 void spice_display_set_grab_keys(SpiceDisplay *display, SpiceGrabSequence *seq);
+SPICE_GTK_AVAILABLE_IN_ALL
 SpiceGrabSequence *spice_display_get_grab_keys(SpiceDisplay *display);
+SPICE_GTK_AVAILABLE_IN_ALL
 void spice_display_send_keys(SpiceDisplay *display, const guint *keyvals,
                              int nkeyvals, SpiceDisplayKeyEvent kind);
+SPICE_GTK_AVAILABLE_IN_ALL
 GdkPixbuf *spice_display_get_pixbuf(SpiceDisplay *display);
 
 G_END_DECLS

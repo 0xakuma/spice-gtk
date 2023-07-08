@@ -122,28 +122,40 @@ struct _SpiceChannelClass
     gpointer _spice_reserved[8];
 };
 
+SPICE_GTK_AVAILABLE_IN_ALL
 GType spice_channel_get_type(void);
 
 typedef void (*spice_msg_handler)(SpiceChannel *channel, SpiceMsgIn *in);
 
+SPICE_GTK_AVAILABLE_IN_ALL
 SpiceChannel *spice_channel_new(SpiceSession *s, int type, int id);
+SPICE_GTK_AVAILABLE_IN_ALL
 gboolean spice_channel_connect(SpiceChannel *channel);
+SPICE_GTK_AVAILABLE_IN_0_2
 gboolean spice_channel_open_fd(SpiceChannel *channel, int fd);
+SPICE_GTK_AVAILABLE_IN_ALL
 void spice_channel_disconnect(SpiceChannel *channel, SpiceChannelEvent reason);
+SPICE_GTK_AVAILABLE_IN_ALL
 gboolean spice_channel_test_capability(SpiceChannel *channel, guint32 cap);
+SPICE_GTK_AVAILABLE_IN_0_6
 gboolean spice_channel_test_common_capability(SpiceChannel *channel, guint32 cap);
+SPICE_GTK_AVAILABLE_IN_0_15
 void spice_channel_flush_async(SpiceChannel *channel, GCancellable *cancellable, GAsyncReadyCallback callback, gpointer user_data);
+SPICE_GTK_AVAILABLE_IN_0_15
 gboolean spice_channel_flush_finish(SpiceChannel *channel, GAsyncResult *result, GError **error);
 #ifndef SPICE_DISABLE_DEPRECATED
-G_DEPRECATED
+SPICE_GTK_DEPRECATED_IN_0_13
 void spice_channel_set_capability(SpiceChannel *channel, guint32 cap);
-G_DEPRECATED
+SPICE_GTK_DEPRECATED_IN_0_27
 void spice_channel_destroy(SpiceChannel *channel);
 #endif
 
+SPICE_GTK_AVAILABLE_IN_0_7
 const gchar* spice_channel_type_to_string(gint type);
+SPICE_GTK_AVAILABLE_IN_0_20
 gint spice_channel_string_to_type(const gchar *str);
 
+SPICE_GTK_AVAILABLE_IN_0_24
 const GError* spice_channel_get_error(SpiceChannel *channel);
 
 G_END_DECLS

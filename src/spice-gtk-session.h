@@ -46,10 +46,14 @@ typedef struct _SpiceGtkSession SpiceGtkSession;
  */
 typedef struct _SpiceGtkSessionClass SpiceGtkSessionClass;
 
+SPICE_GTK_AVAILABLE_IN_0_8
 GType spice_gtk_session_get_type(void);
 
+SPICE_GTK_AVAILABLE_IN_0_8
 SpiceGtkSession *spice_gtk_session_get(SpiceSession *session);
+SPICE_GTK_AVAILABLE_IN_0_8
 void spice_gtk_session_copy_to_guest(SpiceGtkSession *self);
+SPICE_GTK_AVAILABLE_IN_0_8
 void spice_gtk_session_paste_from_guest(SpiceGtkSession *self);
 
 G_END_DECLS

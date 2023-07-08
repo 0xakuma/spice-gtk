@@ -64,6 +64,7 @@ struct _SpiceSmartcardChannelClass {
     /* Do not add fields to this struct */
 };
 
+SPICE_GTK_AVAILABLE_IN_0_7
 GType spice_smartcard_channel_get_type(void);
 
 G_END_DECLS

@@ -40,12 +40,18 @@ G_BEGIN_DECLS
  **/
 typedef struct _SpiceGrabSequence SpiceGrabSequence;
 
+SPICE_GTK_AVAILABLE_IN_0_3
 GType spice_grab_sequence_get_type(void);
 
+SPICE_GTK_AVAILABLE_IN_0_3
 SpiceGrabSequence *spice_grab_sequence_new(guint nkeysyms, guint *keysyms);
+SPICE_GTK_AVAILABLE_IN_0_3
 SpiceGrabSequence *spice_grab_sequence_new_from_string(const gchar *str);
+SPICE_GTK_AVAILABLE_IN_0_3
 SpiceGrabSequence *spice_grab_sequence_copy(SpiceGrabSequence *sequence);
+SPICE_GTK_AVAILABLE_IN_0_3
 void spice_grab_sequence_free(SpiceGrabSequence *sequence);
+SPICE_GTK_AVAILABLE_IN_0_3
 gchar *spice_grab_sequence_as_string(SpiceGrabSequence *sequence);
 
 

@@ -39,12 +39,18 @@ G_BEGIN_DECLS
 typedef struct _SpiceFileTransferTask SpiceFileTransferTask;
 typedef struct _SpiceFileTransferTaskClass SpiceFileTransferTaskClass;
 
+SPICE_GTK_AVAILABLE_IN_0_31
 GType spice_file_transfer_task_get_type(void) G_GNUC_CONST;
 
+SPICE_GTK_AVAILABLE_IN_0_31
 char* spice_file_transfer_task_get_filename(SpiceFileTransferTask *self);
+SPICE_GTK_AVAILABLE_IN_0_31
 void spice_file_transfer_task_cancel(SpiceFileTransferTask *self);
+SPICE_GTK_AVAILABLE_IN_0_33
 guint64 spice_file_transfer_task_get_total_bytes(SpiceFileTransferTask *self);
+SPICE_GTK_AVAILABLE_IN_0_33
 guint64 spice_file_transfer_task_get_transferred_bytes(SpiceFileTransferTask *self);
+SPICE_GTK_AVAILABLE_IN_0_31
 double spice_file_transfer_task_get_progress(SpiceFileTransferTask *self);
 
 G_END_DECLS

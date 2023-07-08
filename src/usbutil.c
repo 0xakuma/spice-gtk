@@ -35,6 +35,7 @@
 #include <sys/stat.h>
 #endif
 #include "usbutil.h"
+#include "spice-version.h"
 #include "spice-util-priv.h"
 
 #define VENDOR_NAME_LEN (122 - sizeof(void *))

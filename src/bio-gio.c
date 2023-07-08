@@ -19,6 +19,7 @@
 #include <string.h>
 #include <glib.h>
 
+#include "spice-version.h"
 #include "spice-util.h"
 #include "bio-gio.h"
 

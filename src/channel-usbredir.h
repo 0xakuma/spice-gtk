@@ -67,6 +67,7 @@ struct _SpiceUsbredirChannelClass {
     /* Do not add fields to this struct */
 };
 
+SPICE_GTK_AVAILABLE_IN_0_8
 GType spice_usbredir_channel_get_type(void);
 
 G_END_DECLS

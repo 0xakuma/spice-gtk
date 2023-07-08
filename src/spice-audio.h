@@ -98,12 +98,14 @@ struct _SpiceAudioClass {
     gpointer _spice_reserved[6];
 };
 
+SPICE_GTK_AVAILABLE_IN_ALL
 GType spice_audio_get_type(void);
 
+SPICE_GTK_AVAILABLE_IN_0_8
 SpiceAudio* spice_audio_get(SpiceSession *session, GMainContext *context);
 
 #ifndef SPICE_DISABLE_DEPRECATED
-G_DEPRECATED_FOR(spice_audio_get)
+SPICE_GTK_DEPRECATED_IN_0_8_FOR(spice_audio_get)
 SpiceAudio* spice_audio_new(SpiceSession *session, GMainContext *context, const char *name);
 #endif
 

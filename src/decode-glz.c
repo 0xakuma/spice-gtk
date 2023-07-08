@@ -23,6 +23,7 @@
 #include <glib.h>
 
 #include "gio-coroutine.h"
+#include "spice-version.h"
 #include "spice-util.h"
 #include "decode.h"
 

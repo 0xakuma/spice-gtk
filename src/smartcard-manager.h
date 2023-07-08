@@ -88,15 +88,24 @@ struct _SpiceSmartcardManagerClass
     gpointer _spice_reserved[10];
 };
 
+SPICE_GTK_AVAILABLE_IN_0_7
 GType spice_smartcard_manager_get_type(void);
+SPICE_GTK_AVAILABLE_IN_0_7
 GType spice_smartcard_reader_get_type(void);
 
+SPICE_GTK_AVAILABLE_IN_0_7
 SpiceSmartcardManager *spice_smartcard_manager_get(void);
+SPICE_GTK_AVAILABLE_IN_0_7
 gboolean spice_smartcard_manager_insert_card(SpiceSmartcardManager *manager);
+SPICE_GTK_AVAILABLE_IN_0_7
 gboolean spice_smartcard_manager_remove_card(SpiceSmartcardManager *manager);
+SPICE_GTK_AVAILABLE_IN_0_7
 gboolean spice_smartcard_reader_is_software(SpiceSmartcardReader *reader);
+SPICE_GTK_AVAILABLE_IN_0_20
 gboolean spice_smartcard_reader_insert_card(SpiceSmartcardReader *reader);
+SPICE_GTK_AVAILABLE_IN_0_20
 gboolean spice_smartcard_reader_remove_card(SpiceSmartcardReader *reader);
+SPICE_GTK_AVAILABLE_IN_0_20
 GList *spice_smartcard_manager_get_readers(SpiceSmartcardManager *manager);
 
 G_END_DECLS
