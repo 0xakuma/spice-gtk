@@ -495,11 +495,17 @@ static gboolean create_pipeline(SpiceGstDecoder *decoder)
     GstElement *playbin, *sink;
     SpiceGstPlayFlags flags;
     GstCaps *caps;
+    static bool playbin3_supported = true;
 
-    playbin = gst_element_factory_make("playbin", "playbin");
+    playbin = playbin3_supported ?
+              gst_element_factory_make("playbin3", "playbin") : NULL;
     if (playbin == NULL) {
-        spice_warning("error upon creation of 'playbin' element");
-        return FALSE;
+        playbin3_supported = false;
+        playbin = gst_element_factory_make("playbin", "playbin");
+        if (playbin == NULL) {
+            spice_warning("error upon creation of 'playbin' element");
+            return FALSE;
+        }
     }
 
     /* Passing the pipeline to widget, try to get window handle and
