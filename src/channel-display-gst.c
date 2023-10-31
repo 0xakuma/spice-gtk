@@ -47,6 +47,7 @@ typedef struct SpiceGstDecoder {
     GstAppSink *appsink;
     GstElement *pipeline;
     GstClock *clock;
+    GstBus *bus;
 
     /* ---------- Decoding and display queues ---------- */
 
@@ -352,6 +353,13 @@ static void free_pipeline(SpiceGstDecoder *decoder)
         return;
     }
 
+    GstBus *bus = decoder->bus;
+    if (bus) {
+        gst_bus_remove_watch(bus);
+        gst_object_unref(bus);
+        decoder->bus = NULL;
+    }
+
     gst_element_set_state(decoder->pipeline, GST_STATE_NULL);
     gst_object_unref(decoder->appsrc);
     decoder->appsrc = NULL;
@@ -534,7 +542,9 @@ static bool launch_pipeline(SpiceGstDecoder *decoder)
     }
     bus = gst_pipeline_get_bus(GST_PIPELINE(decoder->pipeline));
     gst_bus_add_watch(bus, handle_pipeline_message, decoder);
-    gst_object_unref(bus);
+    // Retains the bus object to be able to release the watch.
+    // We keep the reference to avoid a dangling pointer.
+    decoder->bus = bus;
 
     decoder->clock = gst_pipeline_get_clock(GST_PIPELINE(decoder->pipeline));
 
