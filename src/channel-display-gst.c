@@ -353,11 +353,14 @@ static void free_pipeline(SpiceGstDecoder *decoder)
 
     gst_element_set_state(decoder->pipeline, GST_STATE_NULL);
     gst_object_unref(decoder->appsrc);
+    decoder->appsrc = NULL;
     if (decoder->appsink) {
         gst_object_unref(decoder->appsink);
+        decoder->appsink = NULL;
     }
-    gst_object_unref(decoder->pipeline);
     gst_object_unref(decoder->clock);
+    decoder->clock = NULL;
+    gst_object_unref(decoder->pipeline);
     decoder->pipeline = NULL;
 }
 
