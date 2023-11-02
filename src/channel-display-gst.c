@@ -20,6 +20,7 @@
 #include "spice-common.h"
 #include "spice-channel-priv.h"
 #include "common/recorder.h"
+#include "common/udev.h"
 
 #include "channel-display-priv.h"
 
@@ -492,13 +493,221 @@ deep_element_added_cb(GstBin *pipeline, GstBin *bin, GstElement *element,
     }
 }
 
-static gboolean create_pipeline(SpiceGstDecoder *decoder)
+static gchar *find_best_hw_plugin(const gchar *dec_name)
+{
+    static const char plugins[][8] = {"msdk", "va", "vaapi"};
+    GstRegistry *registry;
+    GstPluginFeature *feature;
+    gchar *feature_name;
+    int i;
+
+    registry = gst_registry_get();
+    if (!registry) {
+        return NULL;
+    }
+
+    for (i = 0; i < G_N_ELEMENTS(plugins); i++) {
+        feature_name = !dec_name ? g_strconcat(plugins[i], "postproc", NULL) :
+                       g_strconcat(plugins[i], dec_name, "dec", NULL);
+        feature = gst_registry_lookup_feature(registry, feature_name);
+        if (!feature) {
+            g_free(feature_name);
+            feature_name = NULL;
+            continue;
+        }
+        gst_object_unref(feature);
+        break;
+    }
+    return feature_name;
+}
+
+static bool launch_pipeline(SpiceGstDecoder *decoder)
 {
     GstBus *bus;
+
+    if (decoder->appsink) {
+        GstAppSinkCallbacks appsink_cbs = { NULL };
+        appsink_cbs.new_sample = new_sample;
+        gst_app_sink_set_callbacks(decoder->appsink, &appsink_cbs, decoder, NULL);
+        gst_app_sink_set_max_buffers(decoder->appsink, MAX_DECODED_FRAMES);
+        gst_app_sink_set_drop(decoder->appsink, FALSE);
+    }
+    bus = gst_pipeline_get_bus(GST_PIPELINE(decoder->pipeline));
+    gst_bus_add_watch(bus, handle_pipeline_message, decoder);
+    gst_object_unref(bus);
+
+    decoder->clock = gst_pipeline_get_clock(GST_PIPELINE(decoder->pipeline));
+
+    if (gst_element_set_state(decoder->pipeline, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
+        SPICE_DEBUG("GStreamer error: Unable to set the pipeline to the playing state.");
+        free_pipeline(decoder);
+        return false;
+    }
+
+    return true;
+}
+
+static bool try_intel_hw_pipeline(SpiceGstDecoder *decoder)
+{
+    GstElement *pipeline = NULL, *src = NULL, *sink = NULL;
+    GstElement *parser = NULL, *hw_decoder = NULL, *vpp = NULL;
+    GstCaps *src_caps, *sink_caps;
+    int codec_type = decoder->base.codec_type;
+    const gchar *dec_name = gst_opts[codec_type].name;
+    gchar *hw_dec_name, *vpp_name, *parser_name;
+    bool use_parser;
+
+    use_parser = codec_type == SPICE_VIDEO_CODEC_TYPE_H264 ||
+                 codec_type == SPICE_VIDEO_CODEC_TYPE_H265;
+
+    src = gst_element_factory_make("appsrc", NULL);
+    if (!src) {
+        spice_warning("error upon creation of 'appsrc' element");
+        return false;
+    }
+    sink = gst_element_factory_make("appsink", NULL);
+    if (!sink) {
+        spice_warning("error upon creation of 'appsink' element");
+        goto err;
+    }
+
+    if (use_parser) {
+        parser_name = g_strconcat(dec_name, "parse", NULL);
+        parser = gst_element_factory_make(parser_name, NULL);
+        g_free(parser_name);
+        if (!parser) {
+            spice_warning("error upon creation of 'parser' element");
+            goto err;
+        }
+    }
+
+    hw_dec_name = find_best_hw_plugin(dec_name);
+    if (!hw_dec_name) {
+        spice_warning("error finding suitable plugin for decode");
+        goto err;
+    }
+    hw_decoder = gst_element_factory_make(hw_dec_name, NULL);
+    g_free(hw_dec_name);
+    if (!hw_decoder) {
+        spice_warning("error upon creation of 'decoder' element");
+        goto err;
+    }
+    vpp_name = find_best_hw_plugin(NULL);
+    if (!vpp_name) {
+        spice_warning("error finding suitable plugin for postproc");
+        goto err;
+    }
+    vpp = gst_element_factory_make(vpp_name, NULL);
+    g_free(vpp_name);
+    if (!vpp) {
+        spice_warning("error upon creation of 'vpp' element");
+        goto err;
+    }
+    g_object_set(vpp,
+                 "format", GST_VIDEO_FORMAT_BGRx,
+                 NULL);
+
+    pipeline = gst_pipeline_new(NULL);
+    if (!pipeline) {
+        spice_warning("error upon creation of 'pipeline' element");
+        goto err;
+    }
+
+    src_caps = gst_caps_from_string(gst_opts[codec_type].dec_caps);
+    g_object_set(src,
+                 "caps", src_caps,
+                 "is-live", TRUE,
+                 "format", GST_FORMAT_TIME,
+                 "max-bytes", G_GINT64_CONSTANT(0),
+                 "block", TRUE,
+                 NULL);
+    gst_caps_unref(src_caps);
+    decoder->appsrc = GST_APP_SRC(gst_object_ref(src));
+
+    sink_caps = gst_caps_from_string("video/x-raw,format=BGRx");
+    g_object_set(sink,
+                 "caps", sink_caps,
+                 "sync", FALSE,
+                 "drop", FALSE,
+                 NULL);
+    gst_caps_unref(sink_caps);
+    decoder->appsink = GST_APP_SINK(gst_object_ref(sink));
+
+    if (hand_pipeline_to_widget(decoder->base.stream,
+        GST_PIPELINE(pipeline))) {
+        spice_warning("error handing pipeline to widget");
+        goto err;
+    }
+
+    if (use_parser) {
+        gst_bin_add_many(GST_BIN(pipeline), src, parser, hw_decoder,
+                         vpp, sink, NULL);
+        if (!gst_element_link_many(src, parser, hw_decoder, vpp,
+                                   sink, NULL)) {
+            spice_warning("error linking elements");
+            /* No need to unref these elements anymore as their ownership
+             * would have transferred to the pipeline after gst_bin_add_many().
+             */
+            src = parser = hw_decoder = vpp = sink = NULL;
+            goto err;
+        }
+    } else {
+        gst_bin_add_many(GST_BIN(pipeline), src, hw_decoder,
+                         vpp, sink, NULL);
+        if (!gst_element_link_many(src, hw_decoder, vpp, sink, NULL)) {
+            spice_warning("error linking elements");
+            src = hw_decoder = vpp = sink = NULL;
+            goto err;
+        }
+    }
+
+    decoder->pipeline = pipeline;
+    return launch_pipeline(decoder);
+
+err:
+    if (decoder->appsink) {
+        gst_object_unref(decoder->appsink);
+        decoder->appsink = NULL;
+    }
+    if (decoder->appsrc) {
+        gst_object_unref(decoder->appsrc);
+        decoder->appsrc = NULL;
+    }
+    if (pipeline) {
+        gst_object_unref(pipeline);
+    }
+    if (vpp) {
+        gst_object_unref(vpp);
+    }
+    if (hw_decoder) {
+        gst_object_unref(hw_decoder);
+    }
+    if (parser) {
+        gst_object_unref(parser);
+    }
+    if (sink) {
+        gst_object_unref(sink);
+    }
+    if (src) {
+        gst_object_unref(src);
+    }
+    return false;
+}
+
+static gboolean create_pipeline(SpiceGstDecoder *decoder)
+{
     GstElement *playbin, *sink;
     SpiceGstPlayFlags flags;
     GstCaps *caps;
     static bool playbin3_supported = true;
+    GpuVendor vendor = spice_udev_detect_gpu(INTEL_VENDOR_ID);
+
+    if (vendor == VENDOR_GPU_DETECTED ||
+        vendor == VENDOR_GPU_UNKNOWN) {
+        if (try_intel_hw_pipeline(decoder)) {
+            return TRUE;
+        }
+    }
 
     playbin = playbin3_supported ?
               gst_element_factory_make("playbin3", "playbin") : NULL;
@@ -574,28 +783,8 @@ static gboolean create_pipeline(SpiceGstDecoder *decoder)
     g_warn_if_fail(decoder->appsrc == NULL);
     decoder->pipeline = playbin;
 
-    if (decoder->appsink) {
-        GstAppSinkCallbacks appsink_cbs = { NULL };
-        appsink_cbs.new_sample = new_sample;
-        gst_app_sink_set_callbacks(decoder->appsink, &appsink_cbs, decoder, NULL);
-        gst_app_sink_set_max_buffers(decoder->appsink, MAX_DECODED_FRAMES);
-        gst_app_sink_set_drop(decoder->appsink, FALSE);
-    }
-    bus = gst_pipeline_get_bus(GST_PIPELINE(decoder->pipeline));
-    gst_bus_add_watch(bus, handle_pipeline_message, decoder);
-    gst_object_unref(bus);
-
-    decoder->clock = gst_pipeline_get_clock(GST_PIPELINE(decoder->pipeline));
-
-    if (gst_element_set_state(decoder->pipeline, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
-        SPICE_DEBUG("GStreamer error: Unable to set the pipeline to the playing state.");
-        free_pipeline(decoder);
-        return FALSE;
-    }
-
-    return TRUE;
+    return launch_pipeline(decoder);
 }
-
 
 /* ---------- VideoDecoder's public API ---------- */
 
