@@ -2,14 +2,15 @@
 # Copyright (C) 2009-2016 Red Hat, Inc.
 # This file is distributed under the same license as the gtk-spice package.
 # Copyright of this file © 2017 Chris Leick <c.leick@vollbio.de>.
+# Christoph Brinkhaus <c.brinkhaus@t-online.de>, 2023
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: gtk-spice 0.33-3.3\n"
+"Project-Id-Version: gtk-spice 0.42-2\n"
 "Report-Msgid-Bugs-To: spice-devel@lists.freedesktop.org\n"
 "POT-Creation-Date: 2020-03-11 12:17+0100\n"
-"PO-Revision-Date: 2017-08-15 19:05+0100\n"
-"Last-Translator: Chris Leick <c.leick@vollbio.de>\n"
+"PO-Revision-Date: 2023-11-09 21:05+0100\n"
+"Last-Translator: Christoph Brinkhaus <c.brinkhaus@t-online.de>\n"
 "Language-Team: German <debian-l10n-german@lists.debian.org>\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
@@ -32,25 +33,28 @@ msgid ""
 "File transfer failed due to lack of free space on remote machine (%s free, "
 "%s to transfer)"
 msgstr ""
+"Dateiübertragung mangels freien Speichers auf dem "
+"fernen Rechner fehlgeschlagen (%s frei, %s zu übertragen)"
 
 #: src/channel-main.c:1931
 msgid ""
 "User's session is locked and cannot transfer files, unlock it and try again."
 msgstr ""
+"Benutzersitzung ist gesperrt und kann keine Dateien übertragen, "
+"entsperren Sie sie und versuchen Sie es nochmals."
 
 #: src/channel-main.c:1936
 msgid "Session agent not connected."
-msgstr ""
+msgstr "Sitzungs-Agent nicht verbunden."
 
 #: src/channel-main.c:1940
-#, fuzzy
 msgid "File transfer is disabled."
-msgstr "USB-Weiterleitung ist deaktiviert."
+msgstr "Dateiübertragung ist deaktiviert."
 
 #: src/channel-main.c:3350
-#, fuzzy, c-format
+#, c-format
 msgid "The file transfer is disabled"
-msgstr "USB-Weiterleitung ist deaktiviert."
+msgstr "Die Dateiübertragung ist deaktiviert."
 
 #: src/desktop-integration.c:99
 msgid "Automounting has been inhibited for USB auto-redirecting"
@@ -58,22 +62,20 @@ msgstr ""
 "Automatisches Einhängen wurde für automatische USB-Weiterleitung verhindert."
 
 #: src/spice-channel.c:1177
-#, fuzzy
 msgid "Authentication failed"
-msgstr "Authentifizierung fehlgeschlagen: Benutzername ist erforderlich."
+msgstr "Authentifizierung fehlgeschlagen"
 
 #: src/spice-channel.c:1195
 msgid "Authentication failed: password is too long"
 msgstr "Authentifizierung fehlgeschlagen: Passwort ist zu lang."
 
 #: src/spice-channel.c:1200
-#, fuzzy
 msgid "Authentication failed: wrong password?"
-msgstr "Authentifizierung fehlgeschlagen: Passwort ist erforderlich."
+msgstr "Authentifizierung fehlgeschlagen: falsches Passwort?"
 
 #: src/spice-option.c:61
 msgid "--spice-color-depth is deprecated. Use guest's display settings instead"
-msgstr ""
+msgstr "--spice-color-depth ist veraltet. Verwenden Sie stattdessen Gastanzeigeeinstellungen"
 
 #: src/spice-option.c:81
 #, c-format
@@ -103,9 +105,8 @@ msgid "Disable guest display effects"
 msgstr "deaktiviert Gastanzeigeeffekte"
 
 #: src/spice-option.c:168
-#, fuzzy
 msgid "Guest display color depth (deprecated)"
-msgstr "Gastanzeigefarbtiefe"
+msgstr "Gastanzeigefarbtiefe (veraltet)"
 
 # https://de.wikipedia.org/wiki/Certificate_Trust_Store
 #: src/spice-option.c:170
@@ -178,25 +179,23 @@ msgstr ""
 
 #: src/spice-option.c:188
 msgid "Name of ISO file or CD/DVD device to share"
-msgstr ""
+msgstr "Name der ISO-Datei oder des CD/DVD-Gerätes zur Freigabe"
 
 #: src/spice-option.c:188
 msgid "<filename> (repeat allowed)"
-msgstr ""
+msgstr "<filename> (wiederholen erlaubt)"
 
 #: src/spice-option.c:190
-#, fuzzy
 msgid "Image cache size (deprecated)"
-msgstr "Größe des Bilderzwischenspeichers"
+msgstr "Größe des Bilderzwischenspeichers (veraltet)"
 
 #: src/spice-option.c:190 src/spice-option.c:192
 msgid "<bytes>"
 msgstr "<bytes>"
 
 #: src/spice-option.c:192
-#, fuzzy
 msgid "Glz compression history size (deprecated)"
-msgstr "Glz-Komprimierungs-Chronikgröße"
+msgstr "Glz-Komprimierungs-Chronikgröße (veraltet)"
 
 #: src/spice-option.c:194
 msgid "Shared directory"
@@ -252,26 +251,25 @@ msgid "There are no free USB channels"
 msgstr "Es gibt keine freien USB-Kanäle."
 
 #: src/usb-device-widget.c:209
-#, fuzzy
 msgid "Select ISO file or device"
-msgstr "Auswahl des USB-Geräts zum Weiterleiten"
+msgstr "Auswahl von ISO-Datei oder Gerät"
 
 #: src/usb-device-widget.c:212
 msgid "_Cancel"
-msgstr ""
+msgstr "_Abbrechen"
 
 #: src/usb-device-widget.c:213
 msgid "_Open"
-msgstr ""
+msgstr "_Öffnen"
 
 #: src/usb-device-widget.c:224
 #, c-format
 msgid "shared CD %s, %s"
-msgstr ""
+msgstr "freigegebene CD %s, %s"
 
 #: src/usb-device-widget.c:242
 msgid "SPICE CD (empty)"
-msgstr ""
+msgstr "SPICE CD (leer)"
 
 #: src/usb-device-widget.c:269
 msgid "Select USB devices to redirect"
@@ -280,7 +278,7 @@ msgstr "Auswahl des USB-Geräts zum Weiterleiten"
 #: src/usb-device-widget.c:449
 #, c-format
 msgid "Can't redirect: %s"
-msgstr ""
+msgstr "Kann nicht weiterleiten: %s"
 
 #: src/usb-device-widget.c:470
 #, c-format
