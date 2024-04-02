@@ -69,6 +69,7 @@ registry_handle_global(void *data,
                                "zwp_relative_pointer_manager_v1",
                                relative_pointer_manager,
                                (GDestroyNotify)zwp_relative_pointer_manager_v1_destroy);
+        g_object_set_data(G_OBJECT(widget), "zwp_relative_pointer_v1_name", GUINT_TO_POINTER(name));
     } else if (g_strcmp0(interface, "zwp_pointer_constraints_v1") == 0) {
         struct zwp_pointer_constraints_v1 *pointer_constraints;
         pointer_constraints = registry_bind_gtk(widget, name,
@@ -78,6 +79,7 @@ registry_handle_global(void *data,
                                "zwp_pointer_constraints_v1",
                                pointer_constraints,
                                (GDestroyNotify)zwp_pointer_constraints_v1_destroy);
+        g_object_set_data(G_OBJECT(widget), "zwp_pointer_constraints_v1_name", GUINT_TO_POINTER(name));
     }
 }
 
@@ -86,6 +88,25 @@ registry_handle_global_remove(void *data,
                               struct wl_registry *registry,
                               uint32_t name)
 {
+    GtkWidget *widget = GTK_WIDGET(data);
+
+    struct zwp_relative_pointer_manager_v1 *relative_pointer_manager;
+    uint32_t relative_pointer_manager_name = 0;
+    relative_pointer_manager = g_object_get_data(G_OBJECT(widget), "zwp_relative_pointer_manager_v1");
+    relative_pointer_manager_name = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(widget), "zwp_relative_pointer_v1_name"));
+    if (relative_pointer_manager && relative_pointer_manager_name == name) {
+        g_object_set_data_full(G_OBJECT(widget), "zwp_relative_pointer_manager_v1", NULL, NULL);
+        g_object_steal_data(G_OBJECT(widget), "zwp_relative_pointer_v1_name");
+    }
+
+    struct zwp_pointer_constraints_v1 *pointer_constraints;
+    uint32_t pointer_constraints_name = 0;
+    pointer_constraints = g_object_get_data(G_OBJECT(widget), "zwp_pointer_constraints_v1");
+    pointer_constraints_name = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(widget), "zwp_pointer_constraints_v1_name"));
+    if (pointer_constraints && pointer_constraints_name == name) {
+        g_object_set_data_full(G_OBJECT(widget), "zwp_pointer_constraints_v1", NULL, NULL);
+        g_object_steal_data(G_OBJECT(widget), "zwp_pointer_constraints_v1_name");
+    }
 }
 
 static const struct wl_registry_listener registry_listener = {
