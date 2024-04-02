@@ -32,10 +32,10 @@
 #include "wayland-extensions.h"
 
 static void *
-gtk_wl_registry_bind(GtkWidget *widget,
-                     uint32_t name,
-                     const struct wl_interface *interface,
-                     uint32_t version)
+registry_bind_gtk(GtkWidget *widget,
+                  uint32_t name,
+                  const struct wl_interface *interface,
+                  uint32_t version)
 {
     GdkDisplay *gdk_display = gtk_widget_get_display(widget);
     struct wl_display *display;
@@ -60,20 +60,20 @@ registry_handle_global(void *data,
 {
     GtkWidget *widget = GTK_WIDGET(data);
 
-    if (strcmp(interface, "zwp_relative_pointer_manager_v1") == 0) {
+    if (g_strcmp0(interface, "zwp_relative_pointer_manager_v1") == 0) {
         struct zwp_relative_pointer_manager_v1 *relative_pointer_manager;
-        relative_pointer_manager = gtk_wl_registry_bind(widget, name,
-                                                        &zwp_relative_pointer_manager_v1_interface,
-                                                        1);
+        relative_pointer_manager = registry_bind_gtk(widget, name,
+                                                     &zwp_relative_pointer_manager_v1_interface,
+                                                     1);
         g_object_set_data_full(G_OBJECT(widget),
                                "zwp_relative_pointer_manager_v1",
                                relative_pointer_manager,
                                (GDestroyNotify)zwp_relative_pointer_manager_v1_destroy);
-    } else if (strcmp(interface, "zwp_pointer_constraints_v1") == 0) {
+    } else if (g_strcmp0(interface, "zwp_pointer_constraints_v1") == 0) {
         struct zwp_pointer_constraints_v1 *pointer_constraints;
-        pointer_constraints = gtk_wl_registry_bind(widget, name,
-                                                   &zwp_pointer_constraints_v1_interface,
-                                                   1);
+        pointer_constraints = registry_bind_gtk(widget, name,
+                                                &zwp_pointer_constraints_v1_interface,
+                                                1);
         g_object_set_data_full(G_OBJECT(widget),
                                "zwp_pointer_constraints_v1",
                                pointer_constraints,
