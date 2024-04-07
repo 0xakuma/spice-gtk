@@ -20,6 +20,7 @@
 #include <gtk/gtk.h>
 
 void spice_wayland_extensions_init(GtkWidget *widget);
+void spice_wayland_extensions_finalize(GtkWidget *widget);
 int spice_wayland_extensions_enable_relative_pointer(GtkWidget *widget,
                                                      void (*cb)(void *,
                                                                 struct zwp_relative_pointer_v1 *,
