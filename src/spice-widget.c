@@ -479,6 +479,12 @@ static void spice_display_finalize(GObject *obj)
 
     DISPLAY_DEBUG(display, "Finalize spice display");
 
+#ifdef HAVE_WAYLAND_PROTOCOLS
+    GtkWidget *widget = GTK_WIDGET(display);
+    if GDK_IS_WAYLAND_DISPLAY(gtk_widget_get_display(widget))
+        spice_wayland_extensions_finalize(widget);
+#endif
+
     g_clear_pointer(&d->grabseq, spice_grab_sequence_free);
     g_clear_pointer(&d->activeseq, g_free);
 
