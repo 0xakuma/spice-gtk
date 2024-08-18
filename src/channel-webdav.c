@@ -46,13 +46,15 @@
 
 /* typedef struct _OutputQueue OutputQueue; */
 
-struct _SpiceWebdavChannelPrivate {
+struct _SpiceWebdavChannelPrivate
+{
     SpiceVmcStream *stream;
     GCancellable *cancellable;
     GHashTable *clients;
 
     gboolean demuxing;
-    struct _demux {
+    struct _demux
+    {
         gint64 client;
         guint16 size;
         guint8 *buf;
@@ -97,7 +99,7 @@ static void output_queue_free(OutputQueue *queue)
     g_queue_free_full(queue->queue, g_free);
     g_clear_object(&queue->output);
     if (queue->idle_id)
-        g_source_remove(queue->idle_id);
+        g_spice_source_remove(queue->idle_id);
     g_free(queue);
 }
 
@@ -120,7 +122,7 @@ static void output_queue_flush_cb(GObject *source_object,
     g_clear_error(&error);
 
     if (!q->idle_id)
-        q->idle_id = g_idle_add(output_queue_idle, q);
+        q->idle_id = g_spice_idle_add(output_queue_idle, q);
 
     g_free(e);
 }
@@ -175,7 +177,7 @@ static void output_queue_push(OutputQueue *q, const guint8 *buf, gsize size,
     g_queue_push_tail(q->queue, e);
 
     if (!q->idle_id && !q->flushing)
-        q->idle_id = g_idle_add(output_queue_idle, q);
+        q->idle_id = g_spice_idle_add(output_queue_idle, q);
 }
 #endif
 
@@ -189,7 +191,8 @@ typedef struct Client
     gint64 id;
     GCancellable *cancellable;
 
-    struct {
+    struct
+    {
         gint64 id;
         guint16 size;
         guint8 buf[MAX_MUX_SIZE];
@@ -237,7 +240,8 @@ mux_msg_flushed_cb(GObject *source_object,
     Client *client = user_data;
 
     if (spice_vmc_write_finish(SPICE_CHANNEL(source_object), result, NULL) == -1 ||
-        !client_start_read(client)) {
+        !client_start_read(client))
+    {
         remove_client(client);
     }
 
@@ -254,7 +258,7 @@ static void server_reply_cb(GObject *source_object,
 
     size = g_input_stream_read_finish(G_INPUT_STREAM(source_object), res, &err);
     CHANNEL_DEBUG(SPICE_CHANNEL(client->self),
-        "received %"G_GSSIZE_FORMAT" B from phodav for client %p", size, client);
+                  "received %" G_GSSIZE_FORMAT " B from phodav for client %p", size, client);
     if (err || g_cancellable_is_cancelled(client->cancellable))
         goto end;
 
@@ -262,7 +266,8 @@ static void server_reply_cb(GObject *source_object,
     g_return_if_fail(size >= 0);
     client->mux.size = GUINT16_TO_LE(size);
 
-    if (size == 0) {
+    if (size == 0)
+    {
         remove_client(client);
     }
 
@@ -275,7 +280,8 @@ static void server_reply_cb(GObject *source_object,
     return;
 
 end:
-    if (err) {
+    if (err)
+    {
         if (!g_cancellable_is_cancelled(client->cancellable))
             g_warning("read error: %s", err->message);
         remove_client(client);
@@ -290,7 +296,8 @@ static bool client_start_read(Client *client)
     GInputStream *input;
 
     input = g_io_stream_get_input_stream(G_IO_STREAM(client->pipe));
-    if (g_input_stream_is_closed(input)) {
+    if (g_input_stream_is_closed(input))
+    {
         return false;
     }
     /* use G_PRIORITY_DEFAULT_IDLE to make sure
@@ -309,7 +316,8 @@ static void demux_to_client_finish(Client *client, gboolean fail)
     SpiceWebdavChannel *self = client->self;
     SpiceWebdavChannelPrivate *c = self->priv;
 
-    if (fail) {
+    if (fail)
+    {
         remove_client(client);
     }
 
@@ -327,7 +335,8 @@ static void demux_to_client_cb(GObject *source, GAsyncResult *result, gpointer u
 
     g_output_stream_write_all_finish(G_OUTPUT_STREAM(source), result, &size, &error);
 
-    if (error) {
+    if (error)
+    {
         CHANNEL_DEBUG(client->self, "write failed: %s", error->message);
         g_clear_error(&error);
     }
@@ -345,9 +354,10 @@ static void demux_to_client(Client *client)
     SpiceWebdavChannelPrivate *c = client->self->priv;
     gsize size = c->demux.size;
 
-    CHANNEL_DEBUG(client->self, "pushing %"G_GSIZE_FORMAT" to client %p", size, client);
+    CHANNEL_DEBUG(client->self, "pushing %" G_GSIZE_FORMAT " to client %p", size, client);
 
-    if (size == 0) {
+    if (size == 0)
+    {
         /* Client disconnected */
         demux_to_client_finish(client, TRUE);
         return;
@@ -384,7 +394,7 @@ static void start_client(SpiceWebdavChannel *self)
     client->cancellable = g_cancellable_new();
     spice_make_pipe(&client->pipe, &peer);
 
-    addr = g_inet_socket_address_new_from_string ("127.0.0.1", 0);
+    addr = g_inet_socket_address_new_from_string("127.0.0.1", 0);
     if (!soup_server_accept_iostream(server, peer, addr, addr, &error))
         goto fail;
 
@@ -419,8 +429,10 @@ static void data_read_cb(GObject *source_object,
     gssize size;
 
     size = spice_vmc_input_stream_read_all_finish(G_INPUT_STREAM(source_object), res, &error);
-    if (error) {
-        if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+    if (error)
+    {
+        if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+        {
             g_warning("error: %s", error->message);
         }
         g_clear_error(&error);
@@ -432,7 +444,8 @@ static void data_read_cb(GObject *source_object,
 
     client = g_hash_table_lookup(c->clients, &c->demux.client);
 
-    if (client && g_output_stream_is_closed(g_io_stream_get_output_stream(client->pipe))) {
+    if (client && g_output_stream_is_closed(g_io_stream_get_output_stream(client->pipe)))
+    {
         CHANNEL_DEBUG(self, "found client %p, but it's already closed, removing", client);
         remove_client(client);
         client = NULL;
@@ -440,14 +453,16 @@ static void data_read_cb(GObject *source_object,
 
     if (client)
         demux_to_client(client);
-    else if (size > 0) {
+    else if (size > 0)
+    {
         start_client(self);
-    } else {
+    }
+    else
+    {
         c->demuxing = FALSE;
         start_demux(self);
     }
 }
-
 
 static void size_read_cb(GObject *source_object,
                          GAsyncResult *res,
@@ -466,13 +481,15 @@ static void size_read_cb(GObject *source_object,
     c = self->priv;
     c->demux.size = GUINT16_FROM_LE(c->demux.size);
     spice_vmc_input_stream_read_all_async(istream,
-        c->demux.buf, c->demux.size,
-        G_PRIORITY_DEFAULT, c->cancellable, data_read_cb, self);
+                                          c->demux.buf, c->demux.size,
+                                          G_PRIORITY_DEFAULT, c->cancellable, data_read_cb, self);
     return;
 
 end:
-    if (error) {
-        if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+    if (error)
+    {
+        if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+        {
             g_warning("error: %s", error->message);
         }
         g_clear_error(&error);
@@ -480,8 +497,8 @@ end:
 }
 
 static void client_read_cb(GObject *source_object,
-                               GAsyncResult *res,
-                               gpointer user_data)
+                           GAsyncResult *res,
+                           gpointer user_data)
 {
     SpiceWebdavChannel *self = user_data;
     SpiceWebdavChannelPrivate *c = self->priv;
@@ -495,13 +512,15 @@ static void client_read_cb(GObject *source_object,
 
     c->demux.client = GINT64_FROM_LE(c->demux.client);
     spice_vmc_input_stream_read_all_async(istream,
-        &c->demux.size, sizeof(guint16),
-        G_PRIORITY_DEFAULT, c->cancellable, size_read_cb, self);
+                                          &c->demux.size, sizeof(guint16),
+                                          G_PRIORITY_DEFAULT, c->cancellable, size_read_cb, self);
     return;
 
 end:
-    if (error) {
-        if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+    if (error)
+    {
+        if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+        {
             g_warning("error: %s", error->message);
         }
         g_clear_error(&error);
@@ -520,8 +539,7 @@ static void start_demux(SpiceWebdavChannel *self)
 
     CHANNEL_DEBUG(self, "start demux");
     spice_vmc_input_stream_read_all_async(istream, &c->demux.client, sizeof(gint64),
-        G_PRIORITY_DEFAULT, c->cancellable, client_read_cb, self);
-
+                                          G_PRIORITY_DEFAULT, c->cancellable, client_read_cb, self);
 }
 
 static void port_event(SpiceWebdavChannel *self, gint event)
@@ -529,11 +547,14 @@ static void port_event(SpiceWebdavChannel *self, gint event)
     SpiceWebdavChannelPrivate *c = self->priv;
 
     CHANNEL_DEBUG(self, "port event:%d", event);
-    if (event == SPICE_PORT_EVENT_OPENED) {
+    if (event == SPICE_PORT_EVENT_OPENED)
+    {
         g_clear_object(&c->cancellable);
         c->cancellable = g_cancellable_new();
         start_demux(self);
-    } else {
+    }
+    else
+    {
         g_cancellable_cancel(c->cancellable);
         c->demuxing = FALSE;
         g_hash_table_remove_all(c->clients);
@@ -602,10 +623,10 @@ static void spice_webdav_channel_class_init(SpiceWebdavChannelClass *klass)
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     SpiceChannelClass *channel_class = SPICE_CHANNEL_CLASS(klass);
 
-    gobject_class->dispose      = spice_webdav_channel_dispose;
-    gobject_class->finalize     = spice_webdav_channel_finalize;
-    channel_class->handle_msg   = spice_webdav_handle_msg;
-    channel_class->channel_up   = spice_webdav_channel_up;
+    gobject_class->dispose = spice_webdav_channel_dispose;
+    gobject_class->finalize = spice_webdav_channel_finalize;
+    channel_class->handle_msg = spice_webdav_handle_msg;
+    channel_class->channel_up = spice_webdav_channel_up;
     channel_class->channel_reset = spice_webdav_channel_reset;
 
     g_signal_override_class_handler("port-event",
@@ -629,7 +650,6 @@ static void webdav_handle_data_msg(SpiceChannel *channel, SpiceMsgIn *in)
         buf, size);
 }
 
-
 /* coroutine context */
 static void spice_webdav_handle_msg(SpiceChannel *channel, SpiceMsgIn *msg)
 {
@@ -638,7 +658,8 @@ static void spice_webdav_handle_msg(SpiceChannel *channel, SpiceMsgIn *msg)
 
     parent_class = SPICE_CHANNEL_CLASS(spice_webdav_channel_parent_class);
 
-    if (type == SPICE_MSG_SPICEVMC_DATA) {
+    if (type == SPICE_MSG_SPICEVMC_DATA)
+    {
         webdav_handle_data_msg(channel, msg);
         return;
     }

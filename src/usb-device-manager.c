@@ -40,6 +40,7 @@
 #include "usb-device-manager-priv.h"
 
 #include <glib/gi18n-lib.h>
+#include "spice-util-priv.h"
 
 #ifndef G_OS_WIN32 /* Linux -- device id is bus.addr */
 #define DEV_ID_FMT "at %u.%u"
@@ -69,7 +70,8 @@
 
 G_STATIC_ASSERT(sizeof(SpiceUsbDeviceManagerClass) == sizeof(GObjectClass) + 14 * sizeof(gpointer));
 
-enum {
+enum
+{
     PROP_0,
     PROP_SESSION,
     PROP_AUTO_CONNECT,
@@ -87,7 +89,8 @@ enum
     LAST_SIGNAL,
 };
 
-struct _SpiceUsbDeviceManagerPrivate {
+struct _SpiceUsbDeviceManagerPrivate
+{
     SpiceSession *session;
     gboolean auto_connect;
     gchar *auto_connect_filter;
@@ -108,7 +111,8 @@ struct _SpiceUsbDeviceManagerPrivate {
 #endif
 };
 
-enum {
+enum
+{
     SPICE_USB_DEVICE_STATE_NONE = 0, /* this is also DISCONNECTED */
     SPICE_USB_DEVICE_STATE_CONNECTING,
     SPICE_USB_DEVICE_STATE_CONNECTED,
@@ -153,13 +157,11 @@ _spice_usb_device_manager_connect_device_async(SpiceUsbDeviceManager *manager,
                                                GAsyncReadyCallback callback,
                                                gpointer user_data);
 
-static
-void _connect_device_async_cb(GObject *gobject,
-                              GAsyncResult *channel_res,
-                              gpointer user_data);
-static
-void disconnect_device_sync(SpiceUsbDeviceManager *manager,
-                            SpiceUsbDevice *device);
+static void _connect_device_async_cb(GObject *gobject,
+                                     GAsyncResult *channel_res,
+                                     gpointer user_data);
+static void disconnect_device_sync(SpiceUsbDeviceManager *manager,
+                                   SpiceUsbDevice *device);
 
 G_DEFINE_BOXED_TYPE(SpiceUsbDevice, spice_usb_device,
                     (GBoxedCopyFunc)spice_usb_device_ref,
@@ -196,11 +198,13 @@ gboolean spice_usb_device_manager_is_redirecting(SpiceUsbDeviceManager *manager)
 
 static void spice_usb_device_manager_initable_iface_init(GInitableIface *iface);
 
-static guint signals[LAST_SIGNAL] = { 0, };
+static guint signals[LAST_SIGNAL] = {
+    0,
+};
 
 G_DEFINE_TYPE_WITH_CODE(SpiceUsbDeviceManager, spice_usb_device_manager, G_TYPE_OBJECT,
-     G_ADD_PRIVATE(SpiceUsbDeviceManager)
-     G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, spice_usb_device_manager_initable_iface_init))
+                        G_ADD_PRIVATE(SpiceUsbDeviceManager)
+                            G_IMPLEMENT_INTERFACE(G_TYPE_INITABLE, spice_usb_device_manager_initable_iface_init))
 
 static void spice_usb_device_manager_init(SpiceUsbDeviceManager *manager)
 {
@@ -210,22 +214,25 @@ static void spice_usb_device_manager_init(SpiceUsbDeviceManager *manager)
     manager->priv = priv;
 
 #if defined(G_OS_WIN32) && defined(USE_USBREDIR)
-    if (usbdk_is_driver_installed()) {
+    if (usbdk_is_driver_installed())
+    {
         priv->usbdk_api = usbdk_api_load();
-    } else {
+    }
+    else
+    {
         g_warning("UsbDk driver is not installed");
     }
 #endif
 #ifdef USE_USBREDIR
     priv->channels = g_ptr_array_new();
-    priv->devices  = g_ptr_array_new_with_free_func((GDestroyNotify)
-                                                    spice_usb_device_unref);
+    priv->devices = g_ptr_array_new_with_free_func((GDestroyNotify)
+                                                       spice_usb_device_unref);
 #endif
 }
 
-static gboolean spice_usb_device_manager_initable_init(GInitable  *initable,
-                                                       GCancellable  *cancellable,
-                                                       GError        **err)
+static gboolean spice_usb_device_manager_initable_init(GInitable *initable,
+                                                       GCancellable *cancellable,
+                                                       GError **err)
 {
 #ifndef USE_USBREDIR
     g_set_error_literal(err, SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
@@ -239,14 +246,16 @@ static gboolean spice_usb_device_manager_initable_init(GInitable  *initable,
 
     /* Initialize libusb */
     priv->context = spice_usb_backend_new(err);
-    if (!priv->context) {
+    if (!priv->context)
+    {
         return FALSE;
     }
 
     /* Start listening for usb devices plug / unplug */
     if (!spice_usb_backend_register_hotplug(priv->context, manager,
                                             spice_usb_device_manager_hotplug_cb,
-                                            err)) {
+                                            err))
+    {
         return FALSE;
     }
 
@@ -255,8 +264,9 @@ static gboolean spice_usb_device_manager_initable_init(GInitable  *initable,
     g_signal_connect(priv->session, "channel-destroy",
                      G_CALLBACK(channel_destroy), manager);
     list = spice_session_get_channels(priv->session);
-    for (it = g_list_first(list); it != NULL; it = g_list_next(it)) {
-        channel_new(priv->session, it->data, (gpointer*)manager);
+    for (it = g_list_first(list); it != NULL; it = g_list_next(it))
+    {
+        channel_new(priv->session, it->data, (gpointer *)manager);
     }
     g_list_free(list);
 
@@ -275,7 +285,8 @@ static void spice_usb_device_manager_dispose(GObject *gobject)
 #endif
 
     /* Chain up to the parent class */
-    if (G_OBJECT_CLASS(spice_usb_device_manager_parent_class)->dispose) {
+    if (G_OBJECT_CLASS(spice_usb_device_manager_parent_class)->dispose)
+    {
         G_OBJECT_CLASS(spice_usb_device_manager_parent_class)->dispose(gobject);
     }
 }
@@ -287,10 +298,12 @@ static void spice_usb_device_manager_finalize(GObject *gobject)
 
 #ifdef USE_USBREDIR
     g_ptr_array_unref(priv->channels);
-    if (priv->devices) {
+    if (priv->devices)
+    {
         g_ptr_array_unref(priv->devices);
     }
-    if (priv->context) {
+    if (priv->context)
+    {
         spice_usb_backend_delete(priv->context);
     }
     free(priv->auto_conn_filter_rules);
@@ -305,7 +318,8 @@ static void spice_usb_device_manager_finalize(GObject *gobject)
     g_free(priv->redirect_on_connect);
 
     /* Chain up to the parent class */
-    if (G_OBJECT_CLASS(spice_usb_device_manager_parent_class)->finalize) {
+    if (G_OBJECT_CLASS(spice_usb_device_manager_parent_class)->finalize)
+    {
         G_OBJECT_CLASS(spice_usb_device_manager_parent_class)->finalize(gobject);
     }
 }
@@ -315,15 +329,16 @@ static void spice_usb_device_manager_initable_iface_init(GInitableIface *iface)
     iface->init = spice_usb_device_manager_initable_init;
 }
 
-static void spice_usb_device_manager_get_property(GObject     *gobject,
-                                                  guint        prop_id,
-                                                  GValue      *value,
-                                                  GParamSpec  *pspec)
+static void spice_usb_device_manager_get_property(GObject *gobject,
+                                                  guint prop_id,
+                                                  GValue *value,
+                                                  GParamSpec *pspec)
 {
     SpiceUsbDeviceManager *manager = SPICE_USB_DEVICE_MANAGER(gobject);
     SpiceUsbDeviceManagerPrivate *priv = manager->priv;
 
-    switch (prop_id) {
+    switch (prop_id)
+    {
     case PROP_SESSION:
         g_value_set_object(value, priv->session);
         break;
@@ -336,14 +351,17 @@ static void spice_usb_device_manager_get_property(GObject     *gobject,
     case PROP_REDIRECT_ON_CONNECT:
         g_value_set_string(value, priv->redirect_on_connect);
         break;
-    case PROP_FREE_CHANNELS: {
+    case PROP_FREE_CHANNELS:
+    {
         int free_channels = 0;
 #ifdef USE_USBREDIR
         int i;
-        for (i = 0; i < priv->channels->len; i++) {
+        for (i = 0; i < priv->channels->len; i++)
+        {
             SpiceUsbredirChannel *channel = g_ptr_array_index(priv->channels, i);
 
-            if (!spice_usbredir_channel_get_device(channel)) {
+            if (!spice_usbredir_channel_get_device(channel))
+            {
                 free_channels++;
             }
         }
@@ -357,15 +375,16 @@ static void spice_usb_device_manager_get_property(GObject     *gobject,
     }
 }
 
-static void spice_usb_device_manager_set_property(GObject       *gobject,
-                                                  guint          prop_id,
-                                                  const GValue  *value,
-                                                  GParamSpec    *pspec)
+static void spice_usb_device_manager_set_property(GObject *gobject,
+                                                  guint prop_id,
+                                                  const GValue *value,
+                                                  GParamSpec *pspec)
 {
     SpiceUsbDeviceManager *manager = SPICE_USB_DEVICE_MANAGER(gobject);
     SpiceUsbDeviceManagerPrivate *priv = manager->priv;
 
-    switch (prop_id) {
+    switch (prop_id)
+    {
     case PROP_SESSION:
         priv->session = g_value_get_object(value);
         break;
@@ -375,15 +394,18 @@ static void spice_usb_device_manager_set_property(GObject       *gobject,
         _usbdk_hider_update(manager);
 #endif
         break;
-    case PROP_AUTO_CONNECT_FILTER: {
+    case PROP_AUTO_CONNECT_FILTER:
+    {
         const gchar *filter = g_value_get_string(value);
 #ifdef USE_USBREDIR
         struct usbredirfilter_rule *rules;
         int r, count;
 
         r = usbredirfilter_string_to_rules(filter, ",", "|", &rules, &count);
-        if (r) {
-            if (r == -ENOMEM) {
+        if (r)
+        {
+            if (r == -ENOMEM)
+            {
                 g_error("Failed to allocate memory for auto-connect-filter");
             }
             g_warning("Error parsing auto-connect-filter string, keeping old filter");
@@ -403,18 +425,22 @@ static void spice_usb_device_manager_set_property(GObject       *gobject,
 #endif
         break;
     }
-    case PROP_REDIRECT_ON_CONNECT: {
+    case PROP_REDIRECT_ON_CONNECT:
+    {
         const gchar *filter = g_value_get_string(value);
 #ifdef USE_USBREDIR
         struct usbredirfilter_rule *rules = NULL;
         int r = 0, count = 0;
 
-        if (filter) {
+        if (filter)
+        {
             r = usbredirfilter_string_to_rules(filter, ",", "|",
                                                &rules, &count);
         }
-        if (r) {
-            if (r == -ENOMEM) {
+        if (r)
+        {
+            if (r == -ENOMEM)
+            {
                 g_error("Failed to allocate memory for redirect-on-connect");
             }
             g_warning("Error parsing redirect-on-connect string, keeping old filter");
@@ -438,11 +464,11 @@ static void spice_usb_device_manager_set_property(GObject       *gobject,
 
 static void spice_usb_device_manager_class_init(SpiceUsbDeviceManagerClass *klass)
 {
-    GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+    GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     GParamSpec *pspec;
 
-    gobject_class->dispose      = spice_usb_device_manager_dispose;
-    gobject_class->finalize     = spice_usb_device_manager_finalize;
+    gobject_class->dispose = spice_usb_device_manager_dispose;
+    gobject_class->finalize = spice_usb_device_manager_finalize;
     gobject_class->get_property = spice_usb_device_manager_get_property;
     gobject_class->set_property = spice_usb_device_manager_set_property;
 
@@ -452,14 +478,13 @@ static void spice_usb_device_manager_class_init(SpiceUsbDeviceManagerClass *klas
      * #SpiceSession this #SpiceUsbDeviceManager is associated with
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_SESSION,
-         g_param_spec_object("session",
-                             "Session",
-                             "SpiceSession",
-                             SPICE_TYPE_SESSION,
-                             G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_SESSION,
+                                    g_param_spec_object("session",
+                                                        "Session",
+                                                        "SpiceSession",
+                                                        SPICE_TYPE_SESSION,
+                                                        G_PARAM_CONSTRUCT_ONLY | G_PARAM_READWRITE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceUsbDeviceManager:auto-connect:
@@ -499,9 +524,9 @@ static void spice_usb_device_manager_class_init(SpiceUsbDeviceManagerClass *klas
      * USB filter editor tool.
      */
     pspec = g_param_spec_string("auto-connect-filter", "Auto Connect Filter ",
-               "Filter determining which USB devices to auto connect",
-               "0x03,-1,-1,-1,0|-1,-1,-1,-1,1",
-               G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
+                                "Filter determining which USB devices to auto connect",
+                                "0x03,-1,-1,-1,0|-1,-1,-1,-1,1",
+                                G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property(gobject_class, PROP_AUTO_CONNECT_FILTER,
                                     pspec);
 
@@ -515,8 +540,8 @@ static void spice_usb_device_manager_class_init(SpiceUsbDeviceManagerClass *klas
      * format.
      */
     pspec = g_param_spec_string("redirect-on-connect", "Redirect on connect",
-               "Filter selecting USB devices to redirect on connect", NULL,
-               G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+                                "Filter selecting USB devices to redirect on connect", NULL,
+                                G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
     g_object_class_install_property(gobject_class, PROP_REDIRECT_ON_CONNECT,
                                     pspec);
 
@@ -648,7 +673,8 @@ static void channel_new(SpiceSession *session, SpiceChannel *channel,
 {
     SpiceUsbDeviceManager *manager = user_data;
 
-    if (!SPICE_IS_USBREDIR_CHANNEL(channel)) {
+    if (!SPICE_IS_USBREDIR_CHANNEL(channel))
+    {
         return;
     }
 
@@ -675,7 +701,8 @@ static void channel_destroy(SpiceSession *session, SpiceChannel *channel,
 {
     SpiceUsbDeviceManager *manager = user_data;
 
-    if (!SPICE_IS_USBREDIR_CHANNEL(channel)) {
+    if (!SPICE_IS_USBREDIR_CHANNEL(channel))
+    {
         return;
     }
 
@@ -687,7 +714,8 @@ static void channel_event(SpiceChannel *channel, SpiceChannelEvent event,
 {
     SpiceUsbDeviceManager *manager = user_data;
 
-    switch (event) {
+    switch (event)
+    {
     case SPICE_CHANNEL_NONE:
     case SPICE_CHANNEL_OPENED:
         return;
@@ -709,16 +737,17 @@ static void channel_event(SpiceChannel *channel, SpiceChannelEvent event,
     }
 }
 
-static void spice_usb_device_manager_auto_connect_cb(GObject      *gobject,
+static void spice_usb_device_manager_auto_connect_cb(GObject *gobject,
                                                      GAsyncResult *res,
-                                                     gpointer      user_data)
+                                                     gpointer user_data)
 {
     SpiceUsbDeviceManager *manager = SPICE_USB_DEVICE_MANAGER(gobject);
     SpiceUsbDevice *device = user_data;
     GError *err = NULL;
 
     spice_usb_device_manager_connect_device_finish(manager, res, &err);
-    if (err) {
+    if (err)
+    {
         gchar *desc = spice_usb_device_get_description(device, NULL);
         g_prefix_error(&err, "Could not auto-redirect %s: ", desc);
         g_free(desc);
@@ -738,7 +767,7 @@ spice_usb_device_match(SpiceUsbDevice *device,
             spice_usb_device_get_devaddr(device) == address);
 }
 
-static SpiceUsbDevice*
+static SpiceUsbDevice *
 spice_usb_device_manager_find_device(SpiceUsbDeviceManager *manager,
                                      const int bus, const int address)
 {
@@ -746,9 +775,11 @@ spice_usb_device_manager_find_device(SpiceUsbDeviceManager *manager,
     SpiceUsbDevice *curr, *device = NULL;
     guint i;
 
-    for (i = 0; i < priv->devices->len; i++) {
+    for (i = 0; i < priv->devices->len; i++)
+    {
         curr = g_ptr_array_index(priv->devices, i);
-        if (spice_usb_device_match(curr, bus, address)) {
+        if (spice_usb_device_match(curr, bus, address))
+        {
             device = curr;
             break;
         }
@@ -765,7 +796,8 @@ static void spice_usb_device_manager_add_dev(SpiceUsbDeviceManager *manager,
 
     if (spice_usb_device_manager_find_device(manager,
                                              b_info->bus,
-                                             b_info->address)) {
+                                             b_info->address))
+    {
         SPICE_DEBUG("device not added %d:%d %04x:%04x",
                     b_info->bus,
                     b_info->address,
@@ -775,13 +807,15 @@ static void spice_usb_device_manager_add_dev(SpiceUsbDeviceManager *manager,
     }
 
     device = spice_usb_device_new(bdev);
-    if (!device) {
+    if (!device)
+    {
         return;
     }
 
     g_ptr_array_add(priv->devices, device);
 
-    if (priv->auto_connect) {
+    if (priv->auto_connect)
+    {
         gboolean can_redirect, auto_ok;
 
         can_redirect = spice_usb_device_manager_can_redirect_device(manager, device, NULL);
@@ -790,7 +824,8 @@ static void spice_usb_device_manager_add_dev(SpiceUsbDeviceManager *manager,
                                                         priv->auto_conn_filter_rules,
                                                         priv->auto_conn_filter_rules_count) == 0;
 
-        if (can_redirect && auto_ok) {
+        if (can_redirect && auto_ok)
+        {
             spice_usb_device_manager_connect_device_async(manager, device, NULL,
                                                           spice_usb_device_manager_auto_connect_cb,
                                                           spice_usb_device_ref(device));
@@ -812,7 +847,8 @@ static void spice_usb_device_manager_remove_dev(SpiceUsbDeviceManager *manager,
     const UsbDeviceInformation *b_info = spice_usb_backend_device_get_info(bdev);
 
     device = spice_usb_device_manager_find_device(manager, b_info->bus, b_info->address);
-    if (!device) {
+    if (!device)
+    {
         g_warning("Could not find USB device to remove " DEV_ID_FMT,
                   b_info->bus, b_info->address);
         return;
@@ -831,10 +867,11 @@ static void spice_usb_device_manager_remove_dev(SpiceUsbDeviceManager *manager,
     spice_usb_device_unref(device);
 }
 
-struct hotplug_idle_cb_args {
+struct hotplug_idle_cb_args
+{
     SpiceUsbDeviceManager *manager;
     SpiceUsbDevice *device;
-    gboolean               added;
+    gboolean added;
 };
 
 static gboolean spice_usb_device_manager_hotplug_idle_cb(gpointer user_data)
@@ -842,9 +879,12 @@ static gboolean spice_usb_device_manager_hotplug_idle_cb(gpointer user_data)
     struct hotplug_idle_cb_args *args = user_data;
     SpiceUsbDeviceManager *manager = SPICE_USB_DEVICE_MANAGER(args->manager);
 
-    if (args->added) {
+    if (args->added)
+    {
         spice_usb_device_manager_add_dev(manager, args->device);
-    } else {
+    }
+    else
+    {
         spice_usb_device_manager_remove_dev(manager, args->device);
     }
 
@@ -865,7 +905,7 @@ static void spice_usb_device_manager_hotplug_cb(void *user_data,
     args->manager = g_object_ref(manager);
     args->device = spice_usb_backend_device_ref(dev);
     args->added = added;
-    g_idle_add(spice_usb_device_manager_hotplug_idle_cb, args);
+    g_spice_idle_add(spice_usb_device_manager_hotplug_idle_cb, args);
 }
 
 static void spice_usb_device_manager_channel_connect_cb(GObject *gobject,
@@ -877,9 +917,12 @@ static void spice_usb_device_manager_channel_connect_cb(GObject *gobject,
     GError *err = NULL;
 
     spice_usbredir_channel_connect_device_finish(channel, channel_res, &err);
-    if (err) {
+    if (err)
+    {
         g_task_return_error(task, err);
-    } else {
+    }
+    else
+    {
         g_task_return_boolean(task, TRUE);
     }
 
@@ -898,31 +941,40 @@ static void spice_usb_device_manager_check_redir_on_connect(SpiceUsbDeviceManage
     gboolean is_cd, shall_redirect;
     guint i;
 
-    if (priv->redirect_on_connect == NULL) {
+    if (priv->redirect_on_connect == NULL)
+    {
         return;
     }
 
-    for (i = 0; i < priv->devices->len; i++) {
+    for (i = 0; i < priv->devices->len; i++)
+    {
         device = g_ptr_array_index(priv->devices, i);
 
-        if (spice_usb_device_manager_is_device_connected(manager, device)) {
+        if (spice_usb_device_manager_is_device_connected(manager, device))
+        {
             continue;
         }
 
         is_cd = spice_usb_device_manager_is_device_shared_cd(manager, device);
 
-        if (is_cd) {
+        if (is_cd)
+        {
             shall_redirect = TRUE;
-        } else if (priv->redirect_on_connect) {
+        }
+        else if (priv->redirect_on_connect)
+        {
             const struct usbredirfilter_rule *rules = priv->redirect_on_connect_rules;
             int rules_count = priv->redirect_on_connect_rules_count;
 
             shall_redirect = !spice_usb_backend_device_check_filter(device, rules, rules_count);
-        } else {
+        }
+        else
+        {
             shall_redirect = FALSE;
         }
 
-        if (shall_redirect) {
+        if (shall_redirect)
+        {
             /* Note: re-uses spice_usb_device_manager_connect_device_async's
                completion handling code! */
             task = g_task_new(manager,
@@ -943,7 +995,8 @@ static void
 spice_usb_device_manager_handle_disconnect(SpiceUsbDeviceManager *manager,
                                            SpiceUsbDevice *device)
 {
-    if (spice_usb_device_manager_is_device_shared_cd(manager, device)) {
+    if (spice_usb_device_manager_is_device_shared_cd(manager, device))
+    {
         spice_usb_backend_device_eject(manager->priv->context, device);
     }
 }
@@ -968,11 +1021,13 @@ spice_usb_device_manager_get_channel_for_dev(SpiceUsbDeviceManager *manager,
     SpiceUsbDeviceManagerPrivate *priv = manager->priv;
     guint i;
 
-    for (i = 0; i < priv->channels->len; i++) {
+    for (i = 0; i < priv->channels->len; i++)
+    {
         SpiceUsbredirChannel *channel = g_ptr_array_index(priv->channels, i);
         spice_usbredir_channel_lock(channel);
         SpiceUsbDevice *bdev = spice_usbredir_channel_get_device(channel);
-        if (spice_usb_manager_device_equal_bdev(manager, device, bdev)) {
+        if (spice_usb_manager_device_equal_bdev(manager, device, bdev))
+        {
             spice_usbredir_channel_unlock(channel);
             return channel;
         }
@@ -999,7 +1054,7 @@ spice_usb_device_manager_get_channel_for_dev(SpiceUsbDeviceManager *manager,
  *
  * Since: 0.20
  */
-GPtrArray* spice_usb_device_manager_get_devices_with_filter(SpiceUsbDeviceManager *manager,
+GPtrArray *spice_usb_device_manager_get_devices_with_filter(SpiceUsbDeviceManager *manager,
                                                             const gchar *filter)
 {
     GPtrArray *devices_copy = NULL;
@@ -1012,10 +1067,13 @@ GPtrArray* spice_usb_device_manager_get_devices_with_filter(SpiceUsbDeviceManage
     int r, count = 0;
     guint i;
 
-    if (filter) {
+    if (filter)
+    {
         r = usbredirfilter_string_to_rules(filter, ",", "|", &rules, &count);
-        if (r) {
-            if (r == -ENOMEM) {
+        if (r)
+        {
+            if (r == -ENOMEM)
+            {
                 g_error("Failed to allocate memory for filter");
             }
             g_warning("Error parsing filter, ignoring");
@@ -1025,14 +1083,17 @@ GPtrArray* spice_usb_device_manager_get_devices_with_filter(SpiceUsbDeviceManage
     }
 
     devices_copy = g_ptr_array_new_with_free_func((GDestroyNotify)
-                                                  spice_usb_device_unref);
-    for (i = 0; i < priv->devices->len; i++) {
+                                                      spice_usb_device_unref);
+    for (i = 0; i < priv->devices->len; i++)
+    {
         SpiceUsbDevice *device = g_ptr_array_index(priv->devices, i);
 
-        if (rules) {
+        if (rules)
+        {
             gboolean filter_ok =
                 (spice_usb_backend_device_check_filter(device, rules, count) == 0);
-            if (!filter_ok) {
+            if (!filter_ok)
+            {
                 continue;
             }
         }
@@ -1053,7 +1114,7 @@ GPtrArray* spice_usb_device_manager_get_devices_with_filter(SpiceUsbDeviceManage
  *
  * Returns: (element-type SpiceUsbDevice) (transfer full): a %GPtrArray array of %SpiceUsbDevice
  */
-GPtrArray* spice_usb_device_manager_get_devices(SpiceUsbDeviceManager *manager)
+GPtrArray *spice_usb_device_manager_get_devices(SpiceUsbDeviceManager *manager)
 {
     return spice_usb_device_manager_get_devices_with_filter(manager, NULL);
 }
@@ -1109,17 +1170,20 @@ _spice_usb_device_manager_connect_device_async(SpiceUsbDeviceManager *manager,
     SpiceUsbDeviceManagerPrivate *priv = manager->priv;
     guint i;
 
-    if (spice_usb_device_manager_is_device_connected(manager, device)) {
+    if (spice_usb_device_manager_is_device_connected(manager, device))
+    {
         g_task_return_new_error(task,
                                 SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
                                 "Cannot connect an already connected usb device");
         goto done;
     }
 
-    for (i = 0; i < priv->channels->len; i++) {
+    for (i = 0; i < priv->channels->len; i++)
+    {
         SpiceUsbredirChannel *channel = g_ptr_array_index(priv->channels, i);
 
-        if (spice_usbredir_channel_get_device(channel)) {
+        if (spice_usbredir_channel_get_device(channel))
+        {
             continue; /* Skip already used channels */
         }
 
@@ -1218,10 +1282,9 @@ gboolean spice_usb_device_manager_disconnect_device_finish(SpiceUsbDeviceManager
 }
 
 #ifdef USE_USBREDIR
-static
-void _connect_device_async_cb(GObject *gobject,
-                              GAsyncResult *channel_res,
-                              gpointer user_data)
+static void _connect_device_async_cb(GObject *gobject,
+                                     GAsyncResult *channel_res,
+                                     gpointer user_data)
 {
     SpiceUsbDeviceManager *manager = SPICE_USB_DEVICE_MANAGER(gobject);
     GTask *task = user_data;
@@ -1231,9 +1294,12 @@ void _connect_device_async_cb(GObject *gobject,
     _set_redirecting(manager, FALSE);
 
     rc = _spice_usb_device_manager_connect_device_finish(manager, channel_res, &err);
-    if (rc) {
+    if (rc)
+    {
         g_task_return_boolean(task, TRUE);
-    } else {
+    }
+    else
+    {
         SpiceUsbDevice *device = g_task_get_task_data(task);
 
         spice_usb_device_manager_handle_disconnect(manager, device);
@@ -1255,7 +1321,8 @@ static void disconnect_device_sync(SpiceUsbDeviceManager *manager,
     SpiceUsbredirChannel *channel;
 
     channel = spice_usb_device_manager_get_channel_for_dev(manager, device);
-    if (channel) {
+    if (channel)
+    {
         spice_usbredir_channel_disconnect_device(channel);
     }
 
@@ -1276,10 +1343,9 @@ void spice_usb_device_manager_disconnect_device(SpiceUsbDeviceManager *manager,
 }
 
 #ifdef USE_USBREDIR
-static
-void _disconnect_device_async_cb(GObject *gobject,
-                                 GAsyncResult *channel_res,
-                                 gpointer user_data)
+static void _disconnect_device_async_cb(GObject *gobject,
+                                        GAsyncResult *channel_res,
+                                        gpointer user_data)
 {
     SpiceUsbredirChannel *channel = SPICE_USBREDIR_CHANNEL(gobject);
     GTask *task = user_data;
@@ -1290,9 +1356,12 @@ void _disconnect_device_async_cb(GObject *gobject,
     _set_redirecting(manager, FALSE);
 
     spice_usbredir_channel_disconnect_device_finish(channel, channel_res, &err);
-    if (err) {
+    if (err)
+    {
         g_task_return_error(task, err);
-    } else {
+    }
+    else
+    {
         g_task_return_boolean(task, TRUE);
 
         spice_usb_device_manager_handle_disconnect(manager, device);
@@ -1336,7 +1405,7 @@ void spice_usb_device_manager_disconnect_device_async(SpiceUsbDeviceManager *man
     _set_redirecting(manager, TRUE);
 
     channel = spice_usb_device_manager_get_channel_for_dev(manager, device);
-    nested  = g_task_new(G_OBJECT(manager), cancellable, callback, user_data);
+    nested = g_task_new(G_OBJECT(manager), cancellable, callback, user_data);
     g_task_set_task_data(nested, device, NULL);
 
     spice_usbredir_channel_disconnect_device_async(channel, cancellable,
@@ -1357,8 +1426,8 @@ void spice_usb_device_manager_disconnect_device_async(SpiceUsbDeviceManager *man
  */
 gboolean
 spice_usb_device_manager_can_redirect_device(SpiceUsbDeviceManager *manager,
-                                             SpiceUsbDevice        *device,
-                                             GError                **err)
+                                             SpiceUsbDevice *device,
+                                             GError **err)
 {
 #ifdef USE_USBREDIR
     const struct usbredirfilter_rule *guest_filter_rules = NULL;
@@ -1369,20 +1438,23 @@ spice_usb_device_manager_can_redirect_device(SpiceUsbDeviceManager *manager,
     g_return_val_if_fail(device != NULL, FALSE);
     g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
 
-    if (!spice_session_get_usbredir_enabled(priv->session)) {
+    if (!spice_session_get_usbredir_enabled(priv->session))
+    {
         g_set_error_literal(err, SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
                             _("USB redirection is disabled"));
         return FALSE;
     }
 
-    if (!priv->channels->len) {
+    if (!priv->channels->len)
+    {
         g_set_error_literal(err, SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
                             _("The connected VM is not configured for USB redirection"));
         return FALSE;
     }
 
     /* Skip the other checks for already connected devices */
-    if (spice_usb_device_manager_is_device_connected(manager, device)) {
+    if (spice_usb_device_manager_is_device_connected(manager, device))
+    {
         return TRUE;
     }
 
@@ -1392,13 +1464,15 @@ spice_usb_device_manager_can_redirect_device(SpiceUsbDeviceManager *manager,
                                             &guest_filter_rules,
                                             &guest_filter_rules_count);
 
-    if (guest_filter_rules) {
+    if (guest_filter_rules)
+    {
         gboolean filter_ok;
 
         filter_ok = (spice_usb_backend_device_check_filter(device,
                                                            guest_filter_rules,
                                                            guest_filter_rules_count) == 0);
-        if (!filter_ok) {
+        if (!filter_ok)
+        {
             g_set_error_literal(err, SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
                                 _("Some USB devices are blocked by host policy"));
             return FALSE;
@@ -1406,17 +1480,20 @@ spice_usb_device_manager_can_redirect_device(SpiceUsbDeviceManager *manager,
     }
 
     /* Check if there are free channels */
-    for (i = 0; i < priv->channels->len; i++) {
+    for (i = 0; i < priv->channels->len; i++)
+    {
         SpiceUsbredirChannel *channel = g_ptr_array_index(priv->channels, i);
         spice_usbredir_channel_lock(channel);
 
-        if (!spice_usbredir_channel_get_device(channel)){
+        if (!spice_usbredir_channel_get_device(channel))
+        {
             spice_usbredir_channel_unlock(channel);
             break;
         }
         spice_usbredir_channel_unlock(channel);
     }
-    if (i == priv->channels->len) {
+    if (i == priv->channels->len)
+    {
         g_set_error_literal(err, SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
                             _("There are no free USB channels"));
         return FALSE;
@@ -1540,7 +1617,8 @@ spice_usb_device_manager_allocate_device_for_file_descriptor(SpiceUsbDeviceManag
 {
 #ifdef USE_USBREDIR
     SpiceUsbDeviceManagerPrivate *priv = manager->priv;
-    if (!priv->context) {
+    if (!priv->context)
+    {
         g_set_error_literal(err, SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
                             _("libusb backend is null"));
         return NULL;
@@ -1611,22 +1689,24 @@ gboolean spice_usb_device_is_isochronous(const SpiceUsbDevice *info)
 {
     g_return_val_if_fail(info != NULL, 0);
 
-    return spice_usb_backend_device_isoch((SpiceUsbDevice*) info);
+    return spice_usb_backend_device_isoch((SpiceUsbDevice *)info);
 }
 
 #ifdef G_OS_WIN32
-static
-gboolean _usbdk_hider_prepare(SpiceUsbDeviceManager *manager)
+static gboolean _usbdk_hider_prepare(SpiceUsbDeviceManager *manager)
 {
     SpiceUsbDeviceManagerPrivate *priv = manager->priv;
 
-    if (priv->usbdk_api == NULL) {
+    if (priv->usbdk_api == NULL)
+    {
         return FALSE;
     }
 
-    if (priv->usbdk_hider_handle == NULL) {
+    if (priv->usbdk_hider_handle == NULL)
+    {
         priv->usbdk_hider_handle = usbdk_create_hider_handle(priv->usbdk_api);
-        if (priv->usbdk_hider_handle == NULL) {
+        if (priv->usbdk_hider_handle == NULL)
+        {
             g_warning("Failed to instantiate UsbDk hider interface");
             return FALSE;
         }
@@ -1635,50 +1715,55 @@ gboolean _usbdk_hider_prepare(SpiceUsbDeviceManager *manager)
     return TRUE;
 }
 
-static
-void _usbdk_hider_clear(SpiceUsbDeviceManager *manager)
+static void _usbdk_hider_clear(SpiceUsbDeviceManager *manager)
 {
     SpiceUsbDeviceManagerPrivate *priv = manager->priv;
 
-    if (priv->usbdk_api == NULL) {
+    if (priv->usbdk_api == NULL)
+    {
         return;
     }
 
-    if (priv->usbdk_hider_handle != NULL) {
+    if (priv->usbdk_hider_handle != NULL)
+    {
         usbdk_clear_hide_rules(priv->usbdk_api, priv->usbdk_hider_handle);
         usbdk_close_hider_handle(priv->usbdk_api, priv->usbdk_hider_handle);
         priv->usbdk_hider_handle = NULL;
     }
 }
 
-static
-void _usbdk_hider_update(SpiceUsbDeviceManager *manager)
+static void _usbdk_hider_update(SpiceUsbDeviceManager *manager)
 {
     SpiceUsbDeviceManagerPrivate *priv = manager->priv;
 
-    if (priv->usbdk_api == NULL) {
+    if (priv->usbdk_api == NULL)
+    {
         return;
     }
 
-    if (priv->auto_connect_filter == NULL) {
+    if (priv->auto_connect_filter == NULL)
+    {
         SPICE_DEBUG("No autoredirect rules, no hider setup needed");
         _usbdk_hider_clear(manager);
         return;
     }
 
-    if (!spice_session_get_usbredir_enabled(priv->session)) {
+    if (!spice_session_get_usbredir_enabled(priv->session))
+    {
         SPICE_DEBUG("USB redirection disabled, no hider setup needed");
         _usbdk_hider_clear(manager);
         return;
     }
 
-    if (!priv->auto_connect) {
+    if (!priv->auto_connect)
+    {
         SPICE_DEBUG("Auto-connect disabled, no hider setup needed");
         _usbdk_hider_clear(manager);
         return;
     }
 
-    if (_usbdk_hider_prepare(manager)) {
+    if (_usbdk_hider_prepare(manager))
+    {
         usbdk_api_set_hide_rules(priv->usbdk_api,
                                  priv->usbdk_hider_handle,
                                  priv->auto_connect_filter);
@@ -1705,7 +1790,8 @@ spice_usb_manager_device_equal_bdev(SpiceUsbDeviceManager *manager,
                                     SpiceUsbDevice *info,
                                     SpiceUsbDevice *bdev)
 {
-    if ((info == NULL) || (bdev == NULL)) {
+    if ((info == NULL) || (bdev == NULL))
+    {
         return FALSE;
     }
 

@@ -22,17 +22,17 @@
 
 #include "channel-display-priv.h"
 
-
 /* MJpeg decoder implementation */
 
-typedef struct MJpegDecoder {
+typedef struct MJpegDecoder
+{
     VideoDecoder base;
 
     /* ---------- The builtin mjpeg decoder ---------- */
 
-    struct jpeg_source_mgr         mjpeg_src;
-    struct jpeg_decompress_struct  mjpeg_cinfo;
-    struct jpeg_error_mgr          mjpeg_jerr;
+    struct jpeg_source_mgr mjpeg_src;
+    struct jpeg_decompress_struct mjpeg_cinfo;
+    struct jpeg_error_mgr mjpeg_jerr;
 
     /* ---------- Frame queue ---------- */
 
@@ -45,7 +45,6 @@ typedef struct MJpegDecoder {
     uint8_t *out_frame;
     uint32_t out_size;
 } MJpegDecoder;
-
 
 /* ---------- The JPEG library callbacks ---------- */
 
@@ -73,7 +72,6 @@ static void mjpeg_src_term(struct jpeg_decompress_struct *cinfo)
     /* nothing */
 }
 
-
 /* ---------- Decoder proper ---------- */
 
 static void mjpeg_decoder_schedule(MJpegDecoder *decoder);
@@ -81,7 +79,7 @@ static void mjpeg_decoder_schedule(MJpegDecoder *decoder);
 /* main context */
 static gboolean mjpeg_decoder_decode_frame(gpointer video_decoder)
 {
-    MJpegDecoder *decoder = (MJpegDecoder*)video_decoder;
+    MJpegDecoder *decoder = (MJpegDecoder *)video_decoder;
     JDIMENSION width, height;
     uint8_t *dest;
     uint8_t *lines[4];
@@ -89,7 +87,8 @@ static gboolean mjpeg_decoder_decode_frame(gpointer video_decoder)
     jpeg_read_header(&decoder->mjpeg_cinfo, 1);
     width = decoder->mjpeg_cinfo.image_width;
     height = decoder->mjpeg_cinfo.image_height;
-    if (decoder->out_size < width * height * 4) {
+    if (decoder->out_size < width * height * 4)
+    {
         g_free(decoder->out_frame);
         decoder->out_size = width * height * 4;
         decoder->out_frame = g_malloc(decoder->out_size);
@@ -119,16 +118,19 @@ static gboolean mjpeg_decoder_decode_frame(gpointer video_decoder)
     /* rec_outbuf_height is the recommended size of the output buffer we
      * pass to libjpeg for optimum performance
      */
-    if (decoder->mjpeg_cinfo.rec_outbuf_height > G_N_ELEMENTS(lines)) {
+    if (decoder->mjpeg_cinfo.rec_outbuf_height > G_N_ELEMENTS(lines))
+    {
         jpeg_abort_decompress(&decoder->mjpeg_cinfo);
         g_return_val_if_reached(G_SOURCE_REMOVE);
     }
 
-    while (decoder->mjpeg_cinfo.output_scanline < decoder->mjpeg_cinfo.output_height) {
+    while (decoder->mjpeg_cinfo.output_scanline < decoder->mjpeg_cinfo.output_height)
+    {
         /* only used when JCS_EXTENSIONS is undefined */
         G_GNUC_UNUSED unsigned int lines_read;
 
-        for (unsigned int j = 0; j < decoder->mjpeg_cinfo.rec_outbuf_height; j++) {
+        for (unsigned int j = 0; j < decoder->mjpeg_cinfo.rec_outbuf_height; j++)
+        {
             lines[j] = dest;
 #ifdef JCS_EXTENSIONS
             dest += 4 * width;
@@ -137,17 +139,18 @@ static gboolean mjpeg_decoder_decode_frame(gpointer video_decoder)
 #endif
         }
         lines_read = jpeg_read_scanlines(&decoder->mjpeg_cinfo, lines,
-                                decoder->mjpeg_cinfo.rec_outbuf_height);
+                                         decoder->mjpeg_cinfo.rec_outbuf_height);
 #ifndef JCS_EXTENSIONS
         {
             uint8_t *s = lines[0];
             uint32_t *d = SPICE_ALIGNED_CAST(uint32_t *, s);
 
-            for (unsigned int j = lines_read * width; j > 0; ) {
+            for (unsigned int j = lines_read * width; j > 0;)
+            {
                 j -= 1; // reverse order, bad for cache?
                 d[j] = s[j * 3 + 0] << 16 |
-                    s[j * 3 + 1] << 8 |
-                    s[j * 3 + 2];
+                       s[j * 3 + 1] << 8 |
+                       s[j * 3 + 2];
             }
         }
 #endif
@@ -171,19 +174,23 @@ static gboolean mjpeg_decoder_decode_frame(gpointer video_decoder)
 
 static void mjpeg_decoder_schedule(MJpegDecoder *decoder)
 {
-    if (decoder->timer_id) {
+    if (decoder->timer_id)
+    {
         return;
     }
 
     guint32 time = stream_get_time(decoder->base.stream);
     SpiceFrame *frame = decoder->cur_frame;
     decoder->cur_frame = NULL;
-    do {
-        if (frame) {
-            if (spice_mmtime_diff(time, frame->mm_time) <= 0) {
+    do
+    {
+        if (frame)
+        {
+            if (spice_mmtime_diff(time, frame->mm_time) <= 0)
+            {
                 guint32 d = frame->mm_time - time;
                 decoder->cur_frame = frame;
-                decoder->timer_id = g_timeout_add(d, mjpeg_decoder_decode_frame, decoder);
+                decoder->timer_id = g_spice_timeout_add(d, mjpeg_decoder_decode_frame, decoder);
                 break;
             }
 
@@ -197,7 +204,6 @@ static void mjpeg_decoder_schedule(MJpegDecoder *decoder)
     } while (frame);
 }
 
-
 /* mjpeg_decoder_drop_queue() helper */
 static void spice_frame_unref_func(gpointer data, gpointer user_data)
 {
@@ -206,7 +212,8 @@ static void spice_frame_unref_func(gpointer data, gpointer user_data)
 
 static void mjpeg_decoder_drop_queue(MJpegDecoder *decoder)
 {
-    if (decoder->timer_id != 0) {
+    if (decoder->timer_id != 0)
+    {
         g_source_remove(decoder->timer_id);
         decoder->timer_id = 0;
     }
@@ -220,12 +227,14 @@ static void mjpeg_decoder_drop_queue(MJpegDecoder *decoder)
 static gboolean mjpeg_decoder_queue_frame(VideoDecoder *video_decoder,
                                           SpiceFrame *frame, int32_t margin)
 {
-    MJpegDecoder *decoder = (MJpegDecoder*)video_decoder;
+    MJpegDecoder *decoder = (MJpegDecoder *)video_decoder;
     SpiceFrame *last_frame;
 
     last_frame = g_queue_peek_tail(decoder->msgq);
-    if (last_frame) {
-        if (spice_mmtime_diff(frame->mm_time, last_frame->mm_time) < 0) {
+    if (last_frame)
+    {
+        if (spice_mmtime_diff(frame->mm_time, last_frame->mm_time) < 0)
+        {
             /* This should really not happen */
             SPICE_DEBUG("new-frame-time < last-frame-time (%u < %u):"
                         " resetting stream",
@@ -238,7 +247,8 @@ static gboolean mjpeg_decoder_queue_frame(VideoDecoder *video_decoder,
     /* Dropped MJPEG frames don't impact the ones that come after.
      * So drop late frames as early as possible to save on processing time.
      */
-    if (margin < 0) {
+    if (margin < 0)
+    {
         SPICE_DEBUG("dropping a late MJPEG frame");
         spice_frame_free(frame);
         return TRUE;
@@ -251,19 +261,20 @@ static gboolean mjpeg_decoder_queue_frame(VideoDecoder *video_decoder,
 
 static void mjpeg_decoder_reschedule(VideoDecoder *video_decoder)
 {
-    MJpegDecoder *decoder = (MJpegDecoder*)video_decoder;
+    MJpegDecoder *decoder = (MJpegDecoder *)video_decoder;
 
     SPICE_DEBUG("%s", __FUNCTION__);
-    if (decoder->timer_id != 0) {
+    if (decoder->timer_id != 0)
+    {
         g_source_remove(decoder->timer_id);
         decoder->timer_id = 0;
     }
     mjpeg_decoder_schedule(decoder);
 }
 
-static void mjpeg_decoder_destroy(VideoDecoder* video_decoder)
+static void mjpeg_decoder_destroy(VideoDecoder *video_decoder)
 {
-    MJpegDecoder *decoder = (MJpegDecoder*)video_decoder;
+    MJpegDecoder *decoder = (MJpegDecoder *)video_decoder;
 
     mjpeg_decoder_drop_queue(decoder);
     g_queue_free(decoder->msgq);
@@ -273,7 +284,7 @@ static void mjpeg_decoder_destroy(VideoDecoder* video_decoder)
 }
 
 G_GNUC_INTERNAL
-VideoDecoder* create_mjpeg_decoder(int codec_type, display_stream *stream)
+VideoDecoder *create_mjpeg_decoder(int codec_type, display_stream *stream)
 {
     g_return_val_if_fail(codec_type == SPICE_VIDEO_CODEC_TYPE_MJPEG, NULL);
 
@@ -290,17 +301,17 @@ VideoDecoder* create_mjpeg_decoder(int codec_type, display_stream *stream)
     decoder->mjpeg_cinfo.err = jpeg_std_error(&decoder->mjpeg_jerr);
     jpeg_create_decompress(&decoder->mjpeg_cinfo);
 
-    decoder->mjpeg_src.init_source         = mjpeg_src_init;
-    decoder->mjpeg_src.fill_input_buffer   = mjpeg_src_fill;
-    decoder->mjpeg_src.skip_input_data     = mjpeg_src_skip;
-    decoder->mjpeg_src.resync_to_restart   = jpeg_resync_to_restart;
-    decoder->mjpeg_src.term_source         = mjpeg_src_term;
-    decoder->mjpeg_cinfo.src               = &decoder->mjpeg_src;
+    decoder->mjpeg_src.init_source = mjpeg_src_init;
+    decoder->mjpeg_src.fill_input_buffer = mjpeg_src_fill;
+    decoder->mjpeg_src.skip_input_data = mjpeg_src_skip;
+    decoder->mjpeg_src.resync_to_restart = jpeg_resync_to_restart;
+    decoder->mjpeg_src.term_source = mjpeg_src_term;
+    decoder->mjpeg_cinfo.src = &decoder->mjpeg_src;
 
     /* All the other fields are initialized to zero by g_new0(). */
 
     /* makes the draw-area visible */
     hand_pipeline_to_widget(stream, NULL);
 
-    return (VideoDecoder*)decoder;
+    return (VideoDecoder *)decoder;
 }

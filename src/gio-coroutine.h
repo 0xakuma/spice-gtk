@@ -24,6 +24,7 @@
 
 G_BEGIN_DECLS
 
+
 typedef struct _GCoroutine GCoroutine;
 
 struct _GCoroutine

@@ -6,7 +6,8 @@
 
 #include "giopipe.h"
 
-typedef struct _Fixture {
+typedef struct _Fixture
+{
     GIOStream *p1;
     GIOStream *p2;
 
@@ -29,11 +30,11 @@ typedef struct _Fixture {
 } Fixture;
 
 static gboolean
-stop_loop (gpointer data)
+stop_loop(gpointer data)
 {
     GMainLoop *loop = data;
 
-    g_main_loop_quit (loop);
+    g_main_loop_quit(loop);
     g_assert_not_reached();
 
     return G_SOURCE_REMOVE;
@@ -58,14 +59,15 @@ fixture_set_up(Fixture *fixture,
     fixture->ip2 = g_io_stream_get_input_stream(fixture->p2);
     g_assert_true(G_IS_INPUT_STREAM(fixture->ip2));
 
-    for (i = 0; i < sizeof(fixture->buf); i++) {
+    for (i = 0; i < sizeof(fixture->buf); i++)
+    {
         fixture->buf[i] = 0x42 + i;
     }
 
     fixture->sources = NULL;
     fixture->cancellable = g_cancellable_new();
-    fixture->loop = g_main_loop_new (NULL, FALSE);
-    fixture->timeout = g_timeout_add (1000, stop_loop, fixture->loop);
+    fixture->loop = g_main_loop_new(NULL, FALSE);
+    fixture->timeout = g_spice_timeout_add(1000, stop_loop, fixture->loop);
 }
 
 static void
@@ -76,11 +78,11 @@ fixture_tear_down(Fixture *fixture,
     g_clear_object(&fixture->p2);
 
     if (fixture->sources)
-        g_list_free_full(fixture->sources, (GDestroyNotify) g_source_unref);
+        g_list_free_full(fixture->sources, (GDestroyNotify)g_source_unref);
 
     g_clear_pointer(&fixture->data, g_free);
     g_clear_object(&fixture->cancellable);
-    g_source_remove(fixture->timeout);
+    g_spice_source_remove(fixture->timeout);
     g_main_loop_unref(fixture->loop);
 }
 
@@ -127,7 +129,7 @@ write_cb(GObject *source, GAsyncResult *result, gpointer user_data)
     g_assert_cmpint(nbytes, >, 0);
     g_clear_error(&error);
 
-    g_main_loop_quit (loop);
+    g_main_loop_quit(loop);
 }
 
 static void
@@ -151,14 +153,14 @@ test_pipe_writeread(Fixture *f, gconstpointer user_data G_GNUC_UNUSED)
     g_input_stream_read_async(f->ip2, f->buf, 1, G_PRIORITY_DEFAULT,
                               f->cancellable, read_cb, GINT_TO_POINTER(1));
 
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 
     g_output_stream_write_async(f->op1, "", 1, G_PRIORITY_DEFAULT,
                                 f->cancellable, write_cb, f->loop);
     g_input_stream_read_async(f->ip2, f->buf, 1, G_PRIORITY_DEFAULT,
                               f->cancellable, read_cb, GINT_TO_POINTER(1));
 
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 }
 
 static void
@@ -169,7 +171,7 @@ test_pipe_readwrite(Fixture *f, gconstpointer user_data G_GNUC_UNUSED)
     g_output_stream_write_async(f->op1, "", 1, G_PRIORITY_DEFAULT,
                                 f->cancellable, write_cb, f->loop);
 
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 }
 
 static void
@@ -180,7 +182,7 @@ test_pipe_write16read8(Fixture *f, gconstpointer user_data)
     g_input_stream_read_async(f->ip2, f->buf, 8, G_PRIORITY_DEFAULT,
                               f->cancellable, read_cb, GINT_TO_POINTER(8));
 
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 
     /* check next read would block */
     test_pipe_readblock(f, user_data);
@@ -194,7 +196,7 @@ test_pipe_write8read16(Fixture *f, gconstpointer user_data)
     g_input_stream_read_async(f->ip2, f->buf, 16, G_PRIORITY_DEFAULT,
                               f->cancellable, read_cb, GINT_TO_POINTER(8));
 
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 
     /* check next read would block */
     test_pipe_writeblock(f, user_data);
@@ -212,7 +214,7 @@ readclose_cb(GObject *source, GAsyncResult *result, gpointer user_data)
     g_assert_cmpint(nbytes, ==, 0);
     g_assert_no_error(error);
 
-    g_main_loop_quit (loop);
+    g_main_loop_quit(loop);
 }
 
 static void
@@ -225,7 +227,7 @@ test_pipe_readclosestream(Fixture *f, gconstpointer user_data G_GNUC_UNUSED)
     g_io_stream_close(f->p1, f->cancellable, &error);
     g_assert_no_error(error);
 
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 }
 
 static void
@@ -238,7 +240,7 @@ test_pipe_readclose(Fixture *f, gconstpointer user_data G_GNUC_UNUSED)
     g_output_stream_close(f->op1, f->cancellable, &error);
     g_assert_no_error(error);
 
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 }
 
 static void
@@ -254,7 +256,7 @@ readcancel_cb(GObject *source, GAsyncResult *result, gpointer user_data)
     g_assert_error(error, G_IO_ERROR, G_IO_ERROR_CANCELLED);
     g_clear_error(&error);
 
-    g_main_loop_quit (loop);
+    g_main_loop_quit(loop);
 }
 
 static void
@@ -264,7 +266,7 @@ test_pipe_readcancel(Fixture *f, gconstpointer user_data G_GNUC_UNUSED)
                               f->cancellable, readcancel_cb, f->loop);
     g_cancellable_cancel(f->cancellable);
 
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 }
 
 static void
@@ -281,7 +283,7 @@ writeclose_cb(GObject *source, GAsyncResult *result, gpointer user_data)
     g_assert_error(error, G_IO_ERROR, G_IO_ERROR_CLOSED);
     g_clear_error(&error);
 
-    g_main_loop_quit (loop);
+    g_main_loop_quit(loop);
 }
 
 static void
@@ -294,7 +296,7 @@ test_pipe_writeclosestream(Fixture *f, gconstpointer user_data G_GNUC_UNUSED)
     g_io_stream_close(f->p2, f->cancellable, &error);
     g_assert_no_error(error);
 
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 }
 
 static void
@@ -307,7 +309,7 @@ test_pipe_writeclose(Fixture *f, gconstpointer user_data G_GNUC_UNUSED)
     g_input_stream_close(f->ip2, f->cancellable, &error);
     g_assert_no_error(error);
 
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 }
 
 static void
@@ -324,7 +326,7 @@ writecancel_cb(GObject *source, GAsyncResult *result, gpointer user_data)
     g_assert_error(error, G_IO_ERROR, G_IO_ERROR_CANCELLED);
     g_clear_error(&error);
 
-    g_main_loop_quit (loop);
+    g_main_loop_quit(loop);
 }
 
 static void
@@ -334,7 +336,7 @@ test_pipe_writecancel(Fixture *f, gconstpointer user_data G_GNUC_UNUSED)
                                 f->cancellable, writecancel_cb, f->loop);
     g_cancellable_cancel(f->cancellable);
 
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 }
 
 static gchar *
@@ -364,7 +366,7 @@ write_all_cb(GObject *source, GAsyncResult *result, gpointer user_data)
     g_assert_cmpint(nbytes, ==, f->data_len);
     g_clear_error(&error);
 
-    g_main_loop_quit (f->loop);
+    g_main_loop_quit(f->loop);
 }
 
 static void
@@ -382,7 +384,8 @@ read_chunk_cb(GObject *source, GAsyncResult *result, gpointer user_data)
     g_assert_true(data_match);
 
     f->total_read += nbytes;
-    if (f->total_read != f->data_len) {
+    if (f->total_read != f->data_len)
+    {
         g_input_stream_read_async(f->ip2, f->buf, f->read_size, G_PRIORITY_DEFAULT,
                                   f->cancellable, read_chunk_cb, f);
     }
@@ -400,7 +403,7 @@ test_pipe_write_all_64_read_chunks_16(Fixture *f, gconstpointer user_data G_GNUC
                                     f->cancellable, write_all_cb, f);
     g_input_stream_read_async(f->ip2, f->buf, f->read_size, G_PRIORITY_DEFAULT,
                               f->cancellable, read_chunk_cb, f);
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 }
 
 static void
@@ -418,7 +421,8 @@ read_chunk_cb_and_try_write(GObject *source, GAsyncResult *result, gpointer user
     g_assert_true(data_match);
 
     f->total_read += nbytes;
-    if (f->total_read != f->data_len) {
+    if (f->total_read != f->data_len)
+    {
         /* try write before reading another chunk */
         g_output_stream_write(f->op1, "", 1, f->cancellable, &error);
         g_assert_error(error, G_IO_ERROR, G_IO_ERROR_PENDING);
@@ -441,7 +445,7 @@ test_pipe_concurrent_write(Fixture *f, gconstpointer user_data G_GNUC_UNUSED)
                                     f->cancellable, write_all_cb, f);
     g_input_stream_read_async(f->ip2, f->buf, f->read_size, G_PRIORITY_DEFAULT,
                               f->cancellable, read_chunk_cb_and_try_write, f);
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 }
 
 static void
@@ -457,16 +461,17 @@ write_all_cb_zombie_check(GObject *source, GAsyncResult *result, gpointer user_d
     g_assert_cmpint(nbytes, ==, f->data_len);
     g_clear_error(&error);
 
-    for (it = f->sources; it != NULL; it = it->next) {
+    for (it = f->sources; it != NULL; it = it->next)
+    {
         GSource *s = it->data;
-        g_assert_true (g_source_is_destroyed (s));
+        g_assert_true(g_source_is_destroyed(s));
     }
 
-    g_main_loop_quit (f->loop);
+    g_main_loop_quit(f->loop);
 }
 
 static gboolean
-source_cb (gpointer user_data G_GNUC_UNUSED)
+source_cb(gpointer user_data G_GNUC_UNUSED)
 {
     return G_SOURCE_REMOVE;
 }
@@ -501,8 +506,10 @@ read_chunk_cb_and_do_zombie(GObject *source, GAsyncResult *result, gpointer user
     f->total_read += nbytes;
     try_zombie = (f->total_read + f->read_size < f->data_len);
 
-    if (try_zombie) {
-        for (i = 0; i < NUM_OF_DUMMY_GSOURCE/2; i++) {
+    if (try_zombie)
+    {
+        for (i = 0; i < NUM_OF_DUMMY_GSOURCE / 2; i++)
+        {
             GSource *s = g_pollable_input_stream_create_source(G_POLLABLE_INPUT_STREAM(f->ip2), NULL);
             g_source_set_callback(s, source_cb, NULL, NULL);
             g_source_attach(s, NULL);
@@ -514,8 +521,10 @@ read_chunk_cb_and_do_zombie(GObject *source, GAsyncResult *result, gpointer user
         g_input_stream_read_async(f->ip2, f->buf, f->read_size, G_PRIORITY_DEFAULT,
                                   f->cancellable, read_chunk_cb_and_do_zombie, f);
 
-    if (try_zombie) {
-        for (i = 0; i < NUM_OF_DUMMY_GSOURCE/2; i++) {
+    if (try_zombie)
+    {
+        for (i = 0; i < NUM_OF_DUMMY_GSOURCE / 2; i++)
+        {
             GSource *s = g_pollable_input_stream_create_source(G_POLLABLE_INPUT_STREAM(f->ip2), NULL);
             g_source_set_callback(s, source_cb, NULL, NULL);
             g_source_attach(s, NULL);
@@ -536,10 +545,10 @@ test_pipe_zombie_sources(Fixture *f, gconstpointer user_data G_GNUC_UNUSED)
                                     f->cancellable, write_all_cb_zombie_check, f);
     g_input_stream_read_async(f->ip2, f->buf, f->read_size, G_PRIORITY_DEFAULT,
                               f->cancellable, read_chunk_cb_and_do_zombie, f);
-    g_main_loop_run (f->loop);
+    g_main_loop_run(f->loop);
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     setlocale(LC_ALL, "");
 

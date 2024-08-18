@@ -27,6 +27,7 @@
 #include "smartcard-manager.h"
 #include "smartcard-manager-priv.h"
 #include "spice-marshal.h"
+#include "spice-util-priv.h"
 
 /**
  * SECTION:smartcard-manager
@@ -45,7 +46,8 @@
 
 G_STATIC_ASSERT(sizeof(SpiceSmartcardManagerClass) == sizeof(GObjectClass) + 14 * sizeof(gpointer));
 
-struct _SpiceSmartcardManagerPrivate {
+struct _SpiceSmartcardManagerPrivate
+{
     guint monitor_id;
 
     /* software smartcard reader, the certificates to use for this reader
@@ -67,12 +69,14 @@ G_DEFINE_BOXED_TYPE(VReader, spice_smartcard_reader, g_object_ref, g_object_unre
 #endif
 
 /* Properties */
-enum {
+enum
+{
     PROP_0,
 };
 
 /* Signals */
-enum {
+enum
+{
     SPICE_SMARTCARD_MANAGER_READER_ADDED,
     SPICE_SMARTCARD_MANAGER_READER_REMOVED,
     SPICE_SMARTCARD_MANAGER_CARD_INSERTED,
@@ -110,8 +114,9 @@ static void spice_smartcard_manager_finalize(GObject *gobject)
     SpiceSmartcardManager *manager = SPICE_SMARTCARD_MANAGER(gobject);
     SpiceSmartcardManagerPrivate *priv = manager->priv;
 
-    if (priv->monitor_id != 0) {
-        g_source_remove(priv->monitor_id);
+    if (priv->monitor_id != 0)
+    {
+        g_spice_source_remove(priv->monitor_id);
         priv->monitor_id = 0;
     }
 
@@ -126,7 +131,7 @@ static void spice_smartcard_manager_finalize(GObject *gobject)
 
 static void spice_smartcard_manager_class_init(SpiceSmartcardManagerClass *klass)
 {
-    GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+    GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
 
     /**
      * SpiceSmartcardManager::reader-added:
@@ -205,8 +210,8 @@ static void spice_smartcard_manager_class_init(SpiceSmartcardManagerClass *klass
                      G_TYPE_NONE,
                      1,
                      SPICE_TYPE_SMARTCARD_READER);
-    gobject_class->dispose      = spice_smartcard_manager_dispose;
-    gobject_class->finalize     = spice_smartcard_manager_finalize;
+    gobject_class->dispose = spice_smartcard_manager_dispose;
+    gobject_class->finalize = spice_smartcard_manager_finalize;
 }
 
 /* ------------------------------------------------------------------ */
@@ -244,43 +249,46 @@ static gboolean smartcard_monitor_dispatch(VEvent *event, gpointer user_data)
     g_return_val_if_fail(event != NULL, TRUE);
     SpiceSmartcardManager *manager = SPICE_SMARTCARD_MANAGER(user_data);
 
-    switch (event->type) {
-        case VEVENT_READER_INSERT:
-            if (spice_smartcard_reader_is_software((SpiceSmartcardReader*)event->reader)) {
-                g_warn_if_fail(manager->priv->software_reader == NULL);
-                manager->priv->software_reader = vreader_reference(event->reader);
-            }
-            SPICE_DEBUG("smartcard: reader-added");
-            g_signal_emit(G_OBJECT(user_data),
-                          signals[SPICE_SMARTCARD_MANAGER_READER_ADDED],
-                          0, event->reader);
-            break;
+    switch (event->type)
+    {
+    case VEVENT_READER_INSERT:
+        if (spice_smartcard_reader_is_software((SpiceSmartcardReader *)event->reader))
+        {
+            g_warn_if_fail(manager->priv->software_reader == NULL);
+            manager->priv->software_reader = vreader_reference(event->reader);
+        }
+        SPICE_DEBUG("smartcard: reader-added");
+        g_signal_emit(G_OBJECT(user_data),
+                      signals[SPICE_SMARTCARD_MANAGER_READER_ADDED],
+                      0, event->reader);
+        break;
 
-        case VEVENT_READER_REMOVE:
-            if (spice_smartcard_reader_is_software((SpiceSmartcardReader*)event->reader)) {
-                g_warn_if_fail(manager->priv->software_reader != NULL);
-                g_clear_pointer(&manager->priv->software_reader, vreader_free);
-            }
-            SPICE_DEBUG("smartcard: reader-removed");
-            g_signal_emit(G_OBJECT(user_data),
-                          signals[SPICE_SMARTCARD_MANAGER_READER_REMOVED],
-                          0, event->reader);
-            break;
+    case VEVENT_READER_REMOVE:
+        if (spice_smartcard_reader_is_software((SpiceSmartcardReader *)event->reader))
+        {
+            g_warn_if_fail(manager->priv->software_reader != NULL);
+            g_clear_pointer(&manager->priv->software_reader, vreader_free);
+        }
+        SPICE_DEBUG("smartcard: reader-removed");
+        g_signal_emit(G_OBJECT(user_data),
+                      signals[SPICE_SMARTCARD_MANAGER_READER_REMOVED],
+                      0, event->reader);
+        break;
 
-        case VEVENT_CARD_INSERT:
-            SPICE_DEBUG("smartcard: card-inserted");
-            g_signal_emit(G_OBJECT(user_data),
-                          signals[SPICE_SMARTCARD_MANAGER_CARD_INSERTED],
-                          0, event->reader);
-            break;
-        case VEVENT_CARD_REMOVE:
-            SPICE_DEBUG("smartcard: card-removed");
-            g_signal_emit(G_OBJECT(user_data),
-                          signals[SPICE_SMARTCARD_MANAGER_CARD_REMOVED],
-                          0, event->reader);
-            break;
-        case VEVENT_LAST:
-            break;
+    case VEVENT_CARD_INSERT:
+        SPICE_DEBUG("smartcard: card-inserted");
+        g_signal_emit(G_OBJECT(user_data),
+                      signals[SPICE_SMARTCARD_MANAGER_CARD_INSERTED],
+                      0, event->reader);
+        break;
+    case VEVENT_CARD_REMOVE:
+        SPICE_DEBUG("smartcard: card-removed");
+        g_signal_emit(G_OBJECT(user_data),
+                      signals[SPICE_SMARTCARD_MANAGER_CARD_REMOVED],
+                      0, event->reader);
+        break;
+    case VEVENT_LAST:
+        break;
     }
 
     return TRUE;
@@ -288,7 +296,8 @@ static gboolean smartcard_monitor_dispatch(VEvent *event, gpointer user_data)
 
 /* ------------------------------------------------------------------ */
 /* smartcard monitoring GSource                                       */
-struct _SmartcardSource {
+struct _SmartcardSource
+{
     GSource parent_source;
     VEvent *pending_event;
 };
@@ -321,11 +330,13 @@ static gboolean smartcard_source_dispatch(GSource *source,
 
     g_return_val_if_fail(smartcard_source->pending_event != NULL, FALSE);
 
-    if (callback) {
+    if (callback)
+    {
         gboolean event_consumed;
         event_consumed = smartcard_callback(smartcard_source->pending_event,
                                             user_data);
-        if (event_consumed) {
+        if (event_consumed)
+        {
             vevent_delete(smartcard_source->pending_event);
             smartcard_source->pending_event = NULL;
         }
@@ -347,8 +358,7 @@ static GSource *smartcard_monitor_source_new(void)
         .prepare = smartcard_source_prepare,
         .check = smartcard_source_check,
         .dispatch = smartcard_source_dispatch,
-        .finalize = smartcard_source_finalize
-    };
+        .finalize = smartcard_source_finalize};
     GSource *source;
 
     source = g_source_new(&source_funcs, sizeof(SmartcardSource));
@@ -364,7 +374,7 @@ static guint smartcard_monitor_add(SmartcardSourceFunc callback,
 
     source = smartcard_monitor_source_new();
     g_source_set_callback(source, (GSourceFunc)callback, user_data, NULL);
-    id = g_source_attach(source, NULL);
+    id = g_source_attach(source, spice_main_context());
     g_source_unref(source);
 
     return id;
@@ -384,12 +394,12 @@ spice_smartcard_manager_update_monitor(void)
 
 #define SPICE_SOFTWARE_READER_NAME "Spice Software Smartcard"
 
-typedef struct {
+typedef struct
+{
     SpiceSession *session;
     GCancellable *cancellable;
     GError *err;
 } SmartcardManagerInitArgs;
-
 
 static void smartcard_reader_free(gpointer data)
 {
@@ -402,7 +412,8 @@ static void smartcard_check_reader_count(void)
     GList *readers;
 
     readers = spice_smartcard_manager_get_readers(spice_smartcard_manager_get());
-    if (g_list_length(readers) > 1) {
+    if (g_list_length(readers) > 1)
+    {
         g_warning("Multiple smartcard readers are plugged in, only the first one will be shared with the VM");
     }
     g_list_free_full(readers, smartcard_reader_free);
@@ -427,13 +438,16 @@ static gboolean smartcard_manager_init(SmartcardManagerInitArgs *args)
     if ((certificates == NULL) || (g_strv_length(certificates) != 3))
         goto init;
 
-    if (dbname) {
+    if (dbname)
+    {
         emul_args = g_strdup_printf("db=\"%s\" use_hw=no "
                                     "soft=(,%s,CAC,,%s,%s,%s)",
                                     dbname, SPICE_SOFTWARE_READER_NAME,
                                     certificates[0], certificates[1],
                                     certificates[2]);
-    } else {
+    }
+    else
+    {
         emul_args = g_strdup_printf("use_hw=no soft=(,%s,CAC,,%s,%s,%s)",
                                     SPICE_SOFTWARE_READER_NAME,
                                     certificates[0], certificates[1],
@@ -441,7 +455,8 @@ static gboolean smartcard_manager_init(SmartcardManagerInitArgs *args)
     }
 
     options = vcard_emul_options(emul_args);
-    if (options == NULL) {
+    if (options == NULL)
+    {
         args->err = g_error_new(SPICE_CLIENT_ERROR,
                                 SPICE_CLIENT_ERROR_FAILED,
                                 "vcard_emul_options() failed!");
@@ -454,8 +469,8 @@ static gboolean smartcard_manager_init(SmartcardManagerInitArgs *args)
 init:
     SPICE_DEBUG("vcard_emul_init");
     emul_init_status = vcard_emul_init(options);
-    if ((emul_init_status != VCARD_EMUL_OK)
-            && (emul_init_status != VCARD_EMUL_INIT_ALREADY_INITED)) {
+    if ((emul_init_status != VCARD_EMUL_OK) && (emul_init_status != VCARD_EMUL_INIT_ALREADY_INITED))
+    {
         args->err = g_error_new(SPICE_CLIENT_ERROR,
                                 SPICE_CLIENT_ERROR_FAILED,
                                 "Failed to initialize smartcard");
@@ -485,7 +500,6 @@ static void smartcard_manager_init_helper(GTask *task,
     args.cancellable = cancellable;
     args.err = NULL;
 
-
     g_once(&smartcard_manager_once,
            (GThreadFunc)smartcard_manager_init,
            &args);
@@ -495,7 +509,6 @@ static void smartcard_manager_init_helper(GTask *task,
     else
         g_task_return_boolean(task, TRUE);
 }
-
 
 G_GNUC_INTERNAL
 void spice_smartcard_manager_init_async(SpiceSession *session,
@@ -538,7 +551,7 @@ gboolean spice_smartcard_manager_init_finish(SpiceSession *session,
 gboolean spice_smartcard_reader_is_software(SpiceSmartcardReader *reader)
 {
     g_return_val_if_fail(reader != NULL, FALSE);
-    return (strcmp(vreader_get_name((VReader*)reader), SPICE_SOFTWARE_READER_NAME) == 0);
+    return (strcmp(vreader_get_name((VReader *)reader), SPICE_SOFTWARE_READER_NAME) == 0);
 }
 
 /**
@@ -613,7 +626,8 @@ GList *spice_smartcard_manager_get_readers(SpiceSmartcardManager *manager)
 
     for (entry = vreader_list_get_first(vreader_list);
          entry != NULL;
-         entry = vreader_list_get_next(entry)) {
+         entry = vreader_list_get_next(entry))
+    {
         VReader *reader;
 
         reader = vreader_list_get_reader(entry);
@@ -644,7 +658,7 @@ gboolean spice_smartcard_manager_insert_card(SpiceSmartcardManager *manager)
 {
     SpiceSmartcardReader *reader;
 
-    g_return_val_if_fail (manager->priv->software_reader != NULL, FALSE);
+    g_return_val_if_fail(manager->priv->software_reader != NULL, FALSE);
 
     reader = (SpiceSmartcardReader *)manager->priv->software_reader;
 
@@ -668,7 +682,7 @@ gboolean spice_smartcard_manager_remove_card(SpiceSmartcardManager *manager)
 {
     SpiceSmartcardReader *reader;
 
-    g_return_val_if_fail (manager->priv->software_reader != NULL, FALSE);
+    g_return_val_if_fail(manager->priv->software_reader != NULL, FALSE);
 
     reader = (SpiceSmartcardReader *)manager->priv->software_reader;
 

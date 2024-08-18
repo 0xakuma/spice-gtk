@@ -47,87 +47,87 @@ G_STATIC_ASSERT(sizeof(SpiceSessionClass) == sizeof(GObjectClass) + 12 * sizeof(
 #define MIN_GLZ_WINDOW_SIZE_DEFAULT (1024 * 1024 * 12)
 #define MAX_GLZ_WINDOW_SIZE_DEFAULT MIN((LZ_MAX_WINDOW_SIZE * 4), 1024 * 1024 * 64)
 
-struct _SpiceSessionPrivate {
-    char              *host;
-    char              *unix_path;
-    char              *port;
-    char              *tls_port;
-    char              *username;
-    char              *password;
-    char              *ca_file;
-    char              *ciphers;
-    GByteArray        *pubkey;
-    GByteArray        *ca;
-    char              *cert_subject;
-    guint             verify;
-    gboolean          read_only;
-    SpiceURI          *proxy;
-    gchar             *shared_dir;
-    gboolean          share_dir_ro;
+struct _SpiceSessionPrivate
+{
+    char *host;
+    char *unix_path;
+    char *port;
+    char *tls_port;
+    char *username;
+    char *password;
+    char *ca_file;
+    char *ciphers;
+    GByteArray *pubkey;
+    GByteArray *ca;
+    char *cert_subject;
+    guint verify;
+    gboolean read_only;
+    SpiceURI *proxy;
+    gchar *shared_dir;
+    gboolean share_dir_ro;
 
     /* whether to enable audio */
-    gboolean          audio;
+    gboolean audio;
 
     /* whether to enable smartcard event forwarding to the server */
-    gboolean          smartcard;
+    gboolean smartcard;
 
     /* whether to enable GL scanout */
-    gboolean          gl_scanout;
+    gboolean gl_scanout;
 
     /* list of certificates to use for the software smartcard reader if
      * enabled. For now, it has to contain exactly 3 certificates for
      * the software reader to be functional
      */
-    GStrv             smartcard_certificates;
+    GStrv smartcard_certificates;
 
     /* path to the local certificate database to use to lookup the
      * certificates stored in 'certificates'. If NULL, libcacard will
      * fallback to using a default database.
      */
-    char *            smartcard_db;
+    char *smartcard_db;
 
     /* whether to enable USB redirection */
-    gboolean          usbredir;
+    gboolean usbredir;
 
     /* Set when a usbredir channel has requested the keyboard grab to be
        temporarily released (because it is going to invoke policykit) */
-    gboolean          inhibit_keyboard_grab;
+    gboolean inhibit_keyboard_grab;
 
-    GStrv             disable_effects;
-    GStrv             secure_channels;
+    GStrv disable_effects;
+    GStrv secure_channels;
 
-    int               connection_id;
-    int               protocol;
-    SpiceChannel      *cmain; /* weak reference */
-    GList             *channels;
-    guint             channels_destroying;
-    gboolean          client_provided_sockets;
-    guint64           mm_time_offset;
-    SpiceSession      *migration;
-    GList             *migration_left;
+    int connection_id;
+    int protocol;
+    SpiceChannel *cmain; /* weak reference */
+    GList *channels;
+    guint channels_destroying;
+    gboolean client_provided_sockets;
+    guint64 mm_time_offset;
+    SpiceSession *migration;
+    GList *migration_left;
     SpiceSessionMigration migration_state;
-    gboolean          full_migration; /* seamless migration indicator */
-    guint             disconnecting;
-    gboolean          migrate_wait_init;
-    guint             after_main_init;
-    gboolean          for_migration;
+    gboolean full_migration; /* seamless migration indicator */
+    guint disconnecting;
+    gboolean migrate_wait_init;
+    guint after_main_init;
+    gboolean for_migration;
 
-    display_cache     *images;
+    display_cache *images;
     SpiceGlzDecoderWindow *glz_window;
-    int               images_cache_size;
-    int               glz_window_size;
-    uint32_t          n_display_channels;
-    guint8            uuid[16];
-    gchar             *name;
+    int images_cache_size;
+    int glz_window_size;
+    uint32_t n_display_channels;
+    guint8 uuid[16];
+    gchar *name;
     SpiceImageCompression preferred_compression;
 
     /* associated objects */
-    SpiceAudio        *audio_manager;
+    SpiceAudio *audio_manager;
     SpiceUsbDeviceManager *usb_manager;
     SpicePlaybackChannel *playback_channel;
-    PhodavServer      *webdav;
+    PhodavServer *webdav;
 };
-
 
 /**
  * SECTION:spice-session
@@ -163,7 +163,8 @@ struct _SpiceSessionPrivate {
 G_DEFINE_TYPE_WITH_PRIVATE(SpiceSession, spice_session, G_TYPE_OBJECT)
 
 /* Properties */
-enum {
+enum
+{
     PROP_0,
     PROP_HOST,
     PROP_PORT,
@@ -206,7 +207,8 @@ enum {
 };
 
 /* signals */
-enum {
+enum
+{
     SPICE_SESSION_CHANNEL_NEW,
     SPICE_SESSION_CHANNEL_DESTROY,
     SPICE_SESSION_MM_TIME_RESET,
@@ -216,37 +218,36 @@ enum {
 
 /* Register SpiceImageCompress */
 #define SPICE_TYPE_IMAGE_COMPRESSION spice_image_compress_get_type()
-GType spice_image_compress_get_type (void);
+GType spice_image_compress_get_type(void);
 
 static const GEnumValue _spice_image_compress_values[] = {
-  { SPICE_IMAGE_COMPRESSION_INVALID, "SPICE_IMAGE_COMPRESSION_INVALID", "invalid" },
-  { SPICE_IMAGE_COMPRESSION_OFF, "SPICE_IMAGE_COMPRESSION_OFF", "off" },
-  { SPICE_IMAGE_COMPRESSION_AUTO_GLZ, "SPICE_IMAGE_COMPRESSION_AUTO_GLZ", "auto-glz" },
-  { SPICE_IMAGE_COMPRESSION_AUTO_LZ, "SPICE_IMAGE_COMPRESSION_AUTO_LZ", "auto-lz" },
-  { SPICE_IMAGE_COMPRESSION_QUIC, "SPICE_IMAGE_COMPRESSION_QUIC", "quic" },
-  { SPICE_IMAGE_COMPRESSION_GLZ, "SPICE_IMAGE_COMPRESSION_GLZ", "glz" },
-  { SPICE_IMAGE_COMPRESSION_LZ, "SPICE_IMAGE_COMPRESSION_LZ", "lz" },
-  { SPICE_IMAGE_COMPRESSION_LZ4, "SPICE_IMAGE_COMPRESSION_LZ4", "lz4" },
-  { 0, NULL, NULL }
-};
+    {SPICE_IMAGE_COMPRESSION_INVALID, "SPICE_IMAGE_COMPRESSION_INVALID", "invalid"},
+    {SPICE_IMAGE_COMPRESSION_OFF, "SPICE_IMAGE_COMPRESSION_OFF", "off"},
+    {SPICE_IMAGE_COMPRESSION_AUTO_GLZ, "SPICE_IMAGE_COMPRESSION_AUTO_GLZ", "auto-glz"},
+    {SPICE_IMAGE_COMPRESSION_AUTO_LZ, "SPICE_IMAGE_COMPRESSION_AUTO_LZ", "auto-lz"},
+    {SPICE_IMAGE_COMPRESSION_QUIC, "SPICE_IMAGE_COMPRESSION_QUIC", "quic"},
+    {SPICE_IMAGE_COMPRESSION_GLZ, "SPICE_IMAGE_COMPRESSION_GLZ", "glz"},
+    {SPICE_IMAGE_COMPRESSION_LZ, "SPICE_IMAGE_COMPRESSION_LZ", "lz"},
+    {SPICE_IMAGE_COMPRESSION_LZ4, "SPICE_IMAGE_COMPRESSION_LZ4", "lz4"},
+    {0, NULL, NULL}};
 
 G_STATIC_ASSERT(G_N_ELEMENTS(_spice_image_compress_values) == SPICE_IMAGE_COMPRESSION_ENUM_END + 1);
 
-static const gchar* spice_session_get_shared_dir(SpiceSession *session);
+static const gchar *spice_session_get_shared_dir(SpiceSession *session);
 static void spice_session_set_shared_dir(SpiceSession *session, const gchar *dir);
 
-GType
-spice_image_compress_get_type (void)
+GType spice_image_compress_get_type(void)
 {
-  static GType type = 0;
-  static gsize type_once = 0;
+    static GType type = 0;
+    static gsize type_once = 0;
 
-  if (g_once_init_enter(&type_once)) {
-    type = g_enum_register_static ("SpiceImageCompress", _spice_image_compress_values);
-    g_once_init_leave(&type_once, type);
-  }
+    if (g_once_init_enter(&type_once))
+    {
+        type = g_enum_register_static("SpiceImageCompress", _spice_image_compress_values);
+        g_once_init_leave(&type_once, type);
+    }
 
-  return type;
+    return type;
 }
 
 static guint signals[SPICE_SESSION_LAST_SIGNAL];
@@ -261,7 +262,8 @@ static void update_proxy(SpiceSession *self, const gchar *str)
 
     if (str == NULL)
         str = g_getenv("SPICE_PROXY");
-    if (str == NULL || *str == 0) {
+    if (str == NULL || *str == 0)
+    {
         g_clear_object(&s->proxy);
         return;
     }
@@ -269,12 +271,14 @@ static void update_proxy(SpiceSession *self, const gchar *str)
     proxy = spice_uri_new();
     if (!spice_uri_parse(proxy, str, &error))
         g_clear_object(&proxy);
-    if (error) {
+    if (error)
+    {
         g_warning("%s", error->message);
         g_clear_error(&error);
     }
 
-    if (proxy != NULL) {
+    if (proxy != NULL)
+    {
         g_clear_object(&s->proxy);
         s->proxy = proxy;
     }
@@ -304,13 +308,17 @@ session_disconnect(SpiceSession *self, gboolean keep_main)
 
     s = self->priv;
 
-    for (GList *l = s->channels; l != NULL; ) {
+    for (GList *l = s->channels; l != NULL;)
+    {
         SpiceChannel *channel = l->data;
         l = l->next;
 
-        if (keep_main && channel == s->cmain) {
+        if (keep_main && channel == s->cmain)
+        {
             spice_channel_disconnect(channel, SPICE_CHANNEL_NONE);
-        } else {
+        }
+        else
+        {
             spice_session_channel_destroy(self, channel);
         }
     }
@@ -387,29 +395,36 @@ spice_session_finalize(GObject *gobject)
 #define URI_SCHEME_SPICE_UNIX "spice+unix://"
 #define URI_SCHEME_SPICE_TLS "spice+tls://"
 #define URI_QUERY_START ";?"
-#define URI_QUERY_SEP   ";&"
+#define URI_QUERY_SEP ";&"
 
-static gchar* spice_uri_create(SpiceSession *session)
+static gchar *spice_uri_create(SpiceSession *session)
 {
     SpiceSessionPrivate *s = session->priv;
 
-    if (s->unix_path != NULL) {
+    if (s->unix_path != NULL)
+    {
         return g_strdup_printf(URI_SCHEME_SPICE_UNIX "%s", s->unix_path);
-    } else if (s->host != NULL) {
+    }
+    else if (s->host != NULL)
+    {
         const char *port, *scheme;
         g_return_val_if_fail(s->port != NULL || s->tls_port != NULL, NULL);
 
-        if (s->tls_port && s->port) {
+        if (s->tls_port && s->port)
+        {
             /* both set, use spice://foo?port=4390&tls-port= form */
             return g_strdup_printf(URI_SCHEME_SPICE "%s?port=%s&tls-port=%s",
                                    s->host, s->port, s->tls_port);
         }
 
         /* one set, use spice://foo:4390 or spice+tls://.. form */
-        if (s->tls_port) {
+        if (s->tls_port)
+        {
             scheme = URI_SCHEME_SPICE_TLS;
             port = s->tls_port;
-        } else {
+        }
+        else
+        {
             scheme = URI_SCHEME_SPICE;
             port = s->port;
         }
@@ -433,7 +448,8 @@ static int spice_parse_uri(SpiceSession *session, const char *original_uri)
 
     uri = g_strdup(original_uri);
 
-    if (g_str_has_prefix(uri, URI_SCHEME_SPICE_UNIX)) {
+    if (g_str_has_prefix(uri, URI_SCHEME_SPICE_UNIX))
+    {
         path = uri + strlen(URI_SCHEME_SPICE_UNIX);
         goto end;
     }
@@ -441,19 +457,25 @@ static int spice_parse_uri(SpiceSession *session, const char *original_uri)
     /* Break up the URI into its various parts, scheme, authority,
      * path (ignored) and query
      */
-    if (g_str_has_prefix(uri, URI_SCHEME_SPICE)) {
+    if (g_str_has_prefix(uri, URI_SCHEME_SPICE))
+    {
         authority = uri + strlen(URI_SCHEME_SPICE);
-    } else if (g_str_has_prefix(uri, URI_SCHEME_SPICE_TLS)) {
+    }
+    else if (g_str_has_prefix(uri, URI_SCHEME_SPICE_TLS))
+    {
         authority = uri + strlen(URI_SCHEME_SPICE_TLS);
         tls_scheme = true;
-    } else {
+    }
+    else
+    {
         g_warning("Expected a URI scheme of '%s' in URI '%s'",
                   URI_SCHEME_SPICE, uri);
         goto fail;
     }
 
     tmp = strchr(authority, '@');
-    if (tmp) {
+    if (tmp)
+    {
         tmp[0] = '\0';
         username = g_uri_unescape_string(authority, NULL);
         authority = ++tmp;
@@ -461,29 +483,36 @@ static int spice_parse_uri(SpiceSession *session, const char *original_uri)
     }
 
     path = strchr(authority, '/');
-    if (path) {
+    if (path)
+    {
         path[0] = '\0';
         path++;
     }
 
-    if (path) {
+    if (path)
+    {
         size_t prefix = strcspn(path, URI_QUERY_START);
         query = path + prefix;
-    } else {
+    }
+    else
+    {
         size_t prefix = strcspn(authority, URI_QUERY_START);
         query = authority + prefix;
     }
 
-    if (query && query[0]) {
+    if (query && query[0])
+    {
         query[0] = '\0';
         query++;
     }
 
     /* Now process the individual parts */
 
-    if (authority[0] == '[') {
+    if (authority[0] == '[')
+    {
         tmp = strchr(authority, ']');
-        if (!tmp) {
+        if (!tmp)
+        {
             g_warning("Missing closing ']' in authority for URI '%s'", uri);
             goto fail;
         }
@@ -492,9 +521,12 @@ static int spice_parse_uri(SpiceSession *session, const char *original_uri)
         host = g_strdup_printf("[%s]", authority + 1);
         if (tmp[0] == ':')
             port = g_strdup(tmp + 1);
-    } else {
+    }
+    else
+    {
         tmp = strchr(authority, ':');
-        if (tmp) {
+        if (tmp)
+        {
             *tmp = '\0';
             tmp++;
             port = g_strdup(tmp);
@@ -503,33 +535,40 @@ static int spice_parse_uri(SpiceSession *session, const char *original_uri)
     }
 
     if (path && !(g_str_equal(path, "") ||
-                  g_str_equal(path, "/"))) {
+                  g_str_equal(path, "/")))
+    {
         g_warning("Unexpected path data '%s' for URI '%s'", path, uri);
         /* don't fail, just ignore */
     }
     path = NULL;
 
-    while (query && query[0] != '\0') {
+    while (query && query[0] != '\0')
+    {
         gchar key[32], value[128];
         gchar **target_key;
 
         int len;
-        if (sscanf(query, "%31[-a-zA-Z0-9]=%n", key, &len) != 1) {
+        if (sscanf(query, "%31[-a-zA-Z0-9]=%n", key, &len) != 1)
+        {
             g_warning("Failed to parse key in URI '%s'", query);
             goto fail;
         }
 
         query += len;
-        if (*query == '\0') {
+        if (*query == '\0')
+        {
             SPICE_DEBUG("key '%s' without value", key);
             break;
-        } else if (*query == ';' || *query == '&') {
+        }
+        else if (*query == ';' || *query == '&')
+        {
             /* another argument */
             query++;
             continue;
         }
 
-        if (sscanf(query, "%127[^;&]%n", value, &len) != 1) {
+        if (sscanf(query, "%127[^;&]%n", value, &len) != 1)
+        {
             g_warning("Failed to parse value of key '%s' in URI '%s'", key, query);
             goto fail;
         }
@@ -538,25 +577,35 @@ static int spice_parse_uri(SpiceSession *session, const char *original_uri)
         if (*query)
             query++;
 
-        if (tls_scheme && (g_str_equal(key, "port") || g_str_equal(key, "tls-port"))) {
+        if (tls_scheme && (g_str_equal(key, "port") || g_str_equal(key, "tls-port")))
+        {
             g_warning(URI_SCHEME_SPICE_TLS " scheme doesn't accept '%s'", key);
             continue;
         }
 
         target_key = NULL;
-        if (g_str_equal(key, "port")) {
+        if (g_str_equal(key, "port"))
+        {
             target_key = &port;
-        } else if (g_str_equal(key, "tls-port")) {
+        }
+        else if (g_str_equal(key, "tls-port"))
+        {
             target_key = &tls_port;
-        } else if (g_str_equal(key, "password")) {
+        }
+        else if (g_str_equal(key, "password"))
+        {
             target_key = &password;
             g_warning("password may be visible in process listings");
-        } else {
+        }
+        else
+        {
             g_warning("unknown key in spice URI parsing: '%s'", key);
             goto fail;
         }
-        if (target_key) {
-            if (*target_key) {
+        if (target_key)
+        {
+            if (*target_key)
+            {
                 g_warning("Double set of '%s' in URI '%s'", key, original_uri);
                 goto fail;
             }
@@ -564,7 +613,8 @@ static int spice_parse_uri(SpiceSession *session, const char *original_uri)
         }
     }
 
-    if (port == NULL && tls_port == NULL) {
+    if (port == NULL && tls_port == NULL)
+    {
         g_warning("Missing port or tls-port in spice URI '%s'", original_uri);
         goto fail;
     }
@@ -580,9 +630,12 @@ end:
     s->unix_path = g_strdup(path);
     g_free(uri);
     s->host = host;
-    if (tls_scheme) {
+    if (tls_scheme)
+    {
         s->tls_port = port;
-    } else {
+    }
+    else
+    {
         s->port = port;
         s->tls_port = tls_port;
     }
@@ -600,57 +653,58 @@ fail:
     return -1;
 }
 
-static void spice_session_get_property(GObject    *gobject,
-                                       guint       prop_id,
-                                       GValue     *value,
+static void spice_session_get_property(GObject *gobject,
+                                       guint prop_id,
+                                       GValue *value,
                                        GParamSpec *pspec)
 {
     SpiceSession *session = SPICE_SESSION(gobject);
     SpiceSessionPrivate *s = session->priv;
 
-    switch (prop_id) {
+    switch (prop_id)
+    {
     case PROP_HOST:
         g_value_set_string(value, s->host);
-	break;
+        break;
     case PROP_UNIX_PATH:
         g_value_set_string(value, s->unix_path);
         break;
     case PROP_PORT:
         g_value_set_string(value, s->port);
-	break;
+        break;
     case PROP_TLS_PORT:
         g_value_set_string(value, s->tls_port);
-	break;
+        break;
     case PROP_USERNAME:
         g_value_set_string(value, s->username);
-	break;
+        break;
     case PROP_PASSWORD:
         g_value_set_string(value, s->password);
-	break;
+        break;
     case PROP_CA_FILE:
         g_value_set_string(value, s->ca_file);
-	break;
+        break;
     case PROP_CIPHERS:
         g_value_set_string(value, s->ciphers);
-	break;
+        break;
     case PROP_PROTOCOL:
         g_value_set_int(value, s->protocol);
-	break;
+        break;
     case PROP_URI:
         g_value_take_string(value, spice_uri_create(session));
         break;
     case PROP_CLIENT_SOCKETS:
         g_value_set_boolean(value, s->client_provided_sockets);
-	break;
+        break;
     case PROP_PUBKEY:
         g_value_set_boxed(value, s->pubkey);
-	break;
+        break;
     case PROP_CA:
         g_value_set_boxed(value, s->ca);
-	break;
+        break;
     case PROP_CERT_SUBJECT:
         g_value_set_string(value, s->cert_subject);
-	break;
+        break;
     case PROP_VERIFY:
         g_value_set_flags(value, s->verify);
         break;
@@ -695,13 +749,13 @@ static void spice_session_get_property(GObject    *gobject,
         break;
     case PROP_NAME:
         g_value_set_string(value, s->name);
-	break;
+        break;
     case PROP_UUID:
         g_value_set_pointer(value, s->uuid);
-	break;
+        break;
     case PROP_PROXY:
         g_value_take_string(value, spice_uri_to_string(s->proxy));
-	break;
+        break;
     case PROP_SHARED_DIR:
         g_value_set_string(value, spice_session_get_shared_dir(session));
         break;
@@ -718,21 +772,22 @@ static void spice_session_get_property(GObject    *gobject,
         g_value_set_boolean(value, s->gl_scanout);
         break;
     default:
-	G_OBJECT_WARN_INVALID_PROPERTY_ID(gobject, prop_id, pspec);
-	break;
+        G_OBJECT_WARN_INVALID_PROPERTY_ID(gobject, prop_id, pspec);
+        break;
     }
 }
 
-static void spice_session_set_property(GObject      *gobject,
-                                       guint         prop_id,
+static void spice_session_set_property(GObject *gobject,
+                                       guint prop_id,
                                        const GValue *value,
-                                       GParamSpec   *pspec)
+                                       GParamSpec *pspec)
 {
     SpiceSession *session = SPICE_SESSION(gobject);
     SpiceSessionPrivate *s = session->priv;
     const char *str;
 
-    switch (prop_id) {
+    switch (prop_id)
+    {
     case PROP_HOST:
         g_free(s->host);
         s->host = g_value_dup_string(value);
@@ -784,7 +839,7 @@ static void spice_session_set_property(GObject      *gobject,
             s->verify |= SPICE_SESSION_VERIFY_PUBKEY;
         else
             s->verify &= ~SPICE_SESSION_VERIFY_PUBKEY;
-	break;
+        break;
     case PROP_CERT_SUBJECT:
         g_free(s->cert_subject);
         s->cert_subject = g_value_dup_string(value);
@@ -873,8 +928,8 @@ static void spice_session_class_init(SpiceSessionClass *klass)
 {
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
 
-    gobject_class->dispose      = spice_session_dispose;
-    gobject_class->finalize     = spice_session_finalize;
+    gobject_class->dispose = spice_session_dispose;
+    gobject_class->finalize = spice_session_finalize;
     gobject_class->get_property = spice_session_get_property;
     gobject_class->set_property = spice_session_set_property;
 
@@ -884,15 +939,14 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      * URL of the SPICE host to connect to
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_HOST,
-         g_param_spec_string("host",
-                             "Host",
-                             "Remote host",
-                             "localhost",
-                             G_PARAM_READWRITE |
-                             G_PARAM_CONSTRUCT |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_HOST,
+                                    g_param_spec_string("host",
+                                                        "Host",
+                                                        "Remote host",
+                                                        "localhost",
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_CONSTRUCT |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:unix-path:
@@ -901,15 +955,14 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.28
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_UNIX_PATH,
-         g_param_spec_string("unix-path",
-                             "Unix path",
-                             "Unix path",
-                             NULL,
-                             G_PARAM_READWRITE |
-                             G_PARAM_CONSTRUCT |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_UNIX_PATH,
+                                    g_param_spec_string("unix-path",
+                                                        "Unix path",
+                                                        "Unix path",
+                                                        NULL,
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_CONSTRUCT |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:port:
@@ -917,14 +970,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      * Port to connect to for unencrypted sessions
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_PORT,
-         g_param_spec_string("port",
-                             "Port",
-                             "Remote port (plaintext)",
-                             NULL,
-                             G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_PORT,
+                                    g_param_spec_string("port",
+                                                        "Port",
+                                                        "Remote port (plaintext)",
+                                                        NULL,
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:tls-port:
@@ -932,14 +984,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      * Port to connect to for TLS sessions
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_TLS_PORT,
-         g_param_spec_string("tls-port",
-                             "TLS port",
-                             "Remote port (encrypted)",
-                             NULL,
-                             G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_TLS_PORT,
+                                    g_param_spec_string("tls-port",
+                                                        "TLS port",
+                                                        "Remote port (encrypted)",
+                                                        NULL,
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:username:
@@ -947,14 +998,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      * Username to use
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_USERNAME,
-         g_param_spec_string("username",
-                             "Username",
-                             "Username used for SASL connections",
-                             NULL,
-                             G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_USERNAME,
+                                    g_param_spec_string("username",
+                                                        "Username",
+                                                        "Username used for SASL connections",
+                                                        NULL,
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:password:
@@ -962,14 +1012,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      * TLS password to use
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_PASSWORD,
-         g_param_spec_string("password",
-                             "Password",
-                             "",
-                             NULL,
-                             G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_PASSWORD,
+                                    g_param_spec_string("password",
+                                                        "Password",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:ca-file:
@@ -978,27 +1027,25 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      * connecting to
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_CA_FILE,
-         g_param_spec_string("ca-file",
-                             "CA file",
-                             "File holding the CA certificates",
-                             NULL,
-                             G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_CA_FILE,
+                                    g_param_spec_string("ca-file",
+                                                        "CA file",
+                                                        "File holding the CA certificates",
+                                                        NULL,
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:ciphers:
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_CIPHERS,
-         g_param_spec_string("ciphers",
-                             "Ciphers",
-                             "SSL cipher list",
-                             NULL,
-                             G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_CIPHERS,
+                                    g_param_spec_string("ciphers",
+                                                        "Ciphers",
+                                                        "SSL cipher list",
+                                                        NULL,
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:protocol:
@@ -1006,15 +1053,14 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      * Version of the SPICE protocol to use
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_PROTOCOL,
-         g_param_spec_int("protocol",
-                          "Protocol",
-                          "Spice protocol major version",
-                          1, 2, 2,
-                          G_PARAM_READWRITE |
-                          G_PARAM_CONSTRUCT |
-                          G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_PROTOCOL,
+                                    g_param_spec_int("protocol",
+                                                     "Protocol",
+                                                     "Spice protocol major version",
+                                                     1, 2, 2,
+                                                     G_PARAM_READWRITE |
+                                                         G_PARAM_CONSTRUCT |
+                                                         G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:uri:
@@ -1023,53 +1069,49 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      * spice://hostname?port=XXX or spice://hostname?tls_port=XXX
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_URI,
-         g_param_spec_string("uri",
-                             "URI",
-                             "Spice connection URI",
-                             NULL,
-                             G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_URI,
+                                    g_param_spec_string("uri",
+                                                        "URI",
+                                                        "Spice connection URI",
+                                                        NULL,
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:client-sockets:
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_CLIENT_SOCKETS,
-         g_param_spec_boolean("client-sockets",
-                          "Client sockets",
-                          "Sockets are provided by the client",
-                          FALSE,
-                          G_PARAM_READWRITE |
-                          G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_CLIENT_SOCKETS,
+                                    g_param_spec_boolean("client-sockets",
+                                                         "Client sockets",
+                                                         "Sockets are provided by the client",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE |
+                                                             G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:pubkey:
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_PUBKEY,
-         g_param_spec_boxed("pubkey",
-                            "Pub Key",
-                            "Public key to check",
-                            G_TYPE_BYTE_ARRAY,
-                            G_PARAM_READWRITE |
-                            G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_PUBKEY,
+                                    g_param_spec_boxed("pubkey",
+                                                       "Pub Key",
+                                                       "Public key to check",
+                                                       G_TYPE_BYTE_ARRAY,
+                                                       G_PARAM_READWRITE |
+                                                           G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:cert-subject:
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_CERT_SUBJECT,
-         g_param_spec_string("cert-subject",
-                             "Cert Subject",
-                             "Certificate subject to check",
-                             NULL,
-                             G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_CERT_SUBJECT,
+                                    g_param_spec_string("cert-subject",
+                                                        "Cert Subject",
+                                                        "Certificate subject to check",
+                                                        NULL,
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:verify:
@@ -1077,16 +1119,15 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      * #SpiceSessionVerify bit field indicating which parts of the peer
      * certificate should be checked
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_VERIFY,
-         g_param_spec_flags("verify",
-                            "Verify",
-                            "Certificate verification parameters",
-                            SPICE_TYPE_SESSION_VERIFY,
-                            SPICE_SESSION_VERIFY_HOSTNAME,
-                            G_PARAM_READWRITE |
-                            G_PARAM_CONSTRUCT |
-                            G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_VERIFY,
+                                    g_param_spec_flags("verify",
+                                                       "Verify",
+                                                       "Certificate verification parameters",
+                                                       SPICE_TYPE_SESSION_VERIFY,
+                                                       SPICE_SESSION_VERIFY_HOSTNAME,
+                                                       G_PARAM_READWRITE |
+                                                           G_PARAM_CONSTRUCT |
+                                                           G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:migration-state:
@@ -1095,15 +1136,14 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      * progress
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_MIGRATION_STATE,
-         g_param_spec_enum("migration-state",
-                           "Migration state",
-                           "Migration state",
-                           SPICE_TYPE_SESSION_MIGRATION,
-                           SPICE_SESSION_MIGRATION_NONE,
-                           G_PARAM_READABLE |
-                           G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_MIGRATION_STATE,
+                                    g_param_spec_enum("migration-state",
+                                                      "Migration state",
+                                                      "Migration state",
+                                                      SPICE_TYPE_SESSION_MIGRATION,
+                                                      SPICE_SESSION_MIGRATION_NONE,
+                                                      G_PARAM_READABLE |
+                                                          G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:disable-effects:
@@ -1115,14 +1155,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.7
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_DISABLE_EFFECTS,
-         g_param_spec_boxed ("disable-effects",
-                             "Disable effects",
-                             "Comma-separated effects to disable",
-                             G_TYPE_STRV,
-                             G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_DISABLE_EFFECTS,
+                                    g_param_spec_boxed("disable-effects",
+                                                       "Disable effects",
+                                                       "Comma-separated effects to disable",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE |
+                                                           G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:color-depth:
@@ -1134,15 +1173,14 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      * Deprecated: 0.37: Deprecated due lack of support in drivers, only Windows 7 and older.
      * This option is currently ignored.
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_COLOR_DEPTH,
-         g_param_spec_int("color-depth",
-                          "Color depth",
-                          "Display channel color depth",
-                          0, 32, 0,
-                          G_PARAM_DEPRECATED |
-                          G_PARAM_READWRITE |
-                          G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_COLOR_DEPTH,
+                                    g_param_spec_int("color-depth",
+                                                     "Color depth",
+                                                     "Display channel color depth",
+                                                     0, 32, 0,
+                                                     G_PARAM_DEPRECATED |
+                                                         G_PARAM_READWRITE |
+                                                         G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:enable-smartcard:
@@ -1152,14 +1190,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.7
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_SMARTCARD,
-         g_param_spec_boolean("enable-smartcard",
-                          "Enable smartcard event forwarding",
-                          "Forward smartcard events to the SPICE server",
-                          FALSE,
-                          G_PARAM_READWRITE |
-                          G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_SMARTCARD,
+                                    g_param_spec_boolean("enable-smartcard",
+                                                         "Enable smartcard event forwarding",
+                                                         "Forward smartcard events to the SPICE server",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE |
+                                                             G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:enable-audio:
@@ -1169,14 +1206,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.8
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_AUDIO,
-         g_param_spec_boolean("enable-audio",
-                          "Enable audio channels",
-                          "Enable audio channels",
-                          TRUE,
-                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
-                          G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_AUDIO,
+                                    g_param_spec_boolean("enable-audio",
+                                                         "Enable audio channels",
+                                                         "Enable audio channels",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
+                                                             G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:smartcard-certificates:
@@ -1189,15 +1225,14 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.7
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_SMARTCARD_CERTIFICATES,
-         g_param_spec_boxed("smartcard-certificates",
-                            "Smartcard certificates",
-                            "Smartcard certificates for software-based smartcards",
-                            G_TYPE_STRV,
-                            G_PARAM_READABLE |
-                            G_PARAM_WRITABLE |
-                            G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_SMARTCARD_CERTIFICATES,
+                                    g_param_spec_boxed("smartcard-certificates",
+                                                       "Smartcard certificates",
+                                                       "Smartcard certificates for software-based smartcards",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READABLE |
+                                                           G_PARAM_WRITABLE |
+                                                           G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:smartcard-db:
@@ -1207,15 +1242,14 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.7
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_SMARTCARD_DB,
-         g_param_spec_string("smartcard-db",
-                              "Smartcard certificate database",
-                              "Path to the database for smartcard certificates",
-                              NULL,
-                              G_PARAM_READABLE |
-                              G_PARAM_WRITABLE |
-                              G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_SMARTCARD_DB,
+                                    g_param_spec_string("smartcard-db",
+                                                        "Smartcard certificate database",
+                                                        "Path to the database for smartcard certificates",
+                                                        NULL,
+                                                        G_PARAM_READABLE |
+                                                            G_PARAM_WRITABLE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:enable-usbredir:
@@ -1225,14 +1259,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.8
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_USBREDIR,
-         g_param_spec_boolean("enable-usbredir",
-                          "Enable USB device redirection",
-                          "Forward USB devices to the SPICE server",
-                          TRUE,
-                          G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
-                          G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_USBREDIR,
+                                    g_param_spec_boolean("enable-usbredir",
+                                                         "Enable USB device redirection",
+                                                         "Forward USB devices to the SPICE server",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
+                                                             G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession::inhibit-keyboard-grab:
@@ -1244,13 +1277,12 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.8
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_INHIBIT_KEYBOARD_GRAB,
-         g_param_spec_boolean("inhibit-keyboard-grab",
-                        "Inhibit Keyboard Grab",
-                        "Request that SpiceDisplays don't grab the keyboard",
-                        FALSE,
-                        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_INHIBIT_KEYBOARD_GRAB,
+                                    g_param_spec_boolean("inhibit-keyboard-grab",
+                                                         "Inhibit Keyboard Grab",
+                                                         "Request that SpiceDisplays don't grab the keyboard",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:ca:
@@ -1264,14 +1296,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.15
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_CA,
-         g_param_spec_boxed("ca",
-                            "CA",
-                            "The CA certificates data",
-                            G_TYPE_BYTE_ARRAY,
-                            G_PARAM_READWRITE |
-                            G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_CA,
+                                    g_param_spec_boxed("ca",
+                                                       "CA",
+                                                       "The CA certificates data",
+                                                       G_TYPE_BYTE_ARRAY,
+                                                       G_PARAM_READWRITE |
+                                                           G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:secure-channels:
@@ -1280,15 +1311,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.20
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_SECURE_CHANNELS,
-         g_param_spec_boxed ("secure-channels",
-                             "Secure channels",
-                             "Array of channel type to secure",
-                             G_TYPE_STRV,
-                             G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
-
+    g_object_class_install_property(gobject_class, PROP_SECURE_CHANNELS,
+                                    g_param_spec_boxed("secure-channels",
+                                                       "Secure channels",
+                                                       "Array of channel type to secure",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE |
+                                                           G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession::channel-new:
@@ -1367,14 +1396,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.8
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_READ_ONLY,
-         g_param_spec_boolean("read-only", "Read-only",
-                              "Whether this connection is read-only mode",
-                              FALSE,
-                              G_PARAM_READWRITE |
-                              G_PARAM_CONSTRUCT |
-                              G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_READ_ONLY,
+                                    g_param_spec_boolean("read-only", "Read-only",
+                                                         "Whether this connection is read-only mode",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE |
+                                                             G_PARAM_CONSTRUCT |
+                                                             G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:cache-size:
@@ -1383,14 +1411,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.9
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_CACHE_SIZE,
-         g_param_spec_int("cache-size",
-                          "Cache size",
-                          "Images cache size (bytes)",
-                          0, G_MAXINT, 0,
-                          G_PARAM_READWRITE |
-                          G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_CACHE_SIZE,
+                                    g_param_spec_int("cache-size",
+                                                     "Cache size",
+                                                     "Images cache size (bytes)",
+                                                     0, G_MAXINT, 0,
+                                                     G_PARAM_READWRITE |
+                                                         G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:glz-window-size:
@@ -1399,14 +1426,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.9
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_GLZ_WINDOW_SIZE,
-         g_param_spec_int("glz-window-size",
-                          "Glz window size",
-                          "Glz window size (bytes)",
-                          0, LZ_MAX_WINDOW_SIZE * 4, 0,
-                          G_PARAM_READWRITE |
-                          G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_GLZ_WINDOW_SIZE,
+                                    g_param_spec_int("glz-window-size",
+                                                     "Glz window size",
+                                                     "Glz window size (bytes)",
+                                                     0, LZ_MAX_WINDOW_SIZE * 4, 0,
+                                                     G_PARAM_READWRITE |
+                                                         G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:name:
@@ -1415,14 +1441,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.11
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_NAME,
-         g_param_spec_string("name",
-                             "Name",
-                             "Spice server name",
-                             NULL,
-                             G_PARAM_READABLE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_NAME,
+                                    g_param_spec_string("name",
+                                                        "Name",
+                                                        "Spice server name",
+                                                        NULL,
+                                                        G_PARAM_READABLE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:uuid:
@@ -1431,13 +1456,12 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.11
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_UUID,
-         g_param_spec_pointer("uuid",
-                              "UUID",
-                              "Spice server uuid",
-                              G_PARAM_READABLE |
-                              G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_UUID,
+                                    g_param_spec_pointer("uuid",
+                                                         "UUID",
+                                                         "Spice server uuid",
+                                                         G_PARAM_READABLE |
+                                                             G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:proxy:
@@ -1447,14 +1471,13 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.17
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_PROXY,
-         g_param_spec_string("proxy",
-                             "Proxy",
-                             "The proxy server",
-                             NULL,
-                             G_PARAM_READWRITE |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_PROXY,
+                                    g_param_spec_string("proxy",
+                                                        "Proxy",
+                                                        "The proxy server",
+                                                        NULL,
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:shared-dir:
@@ -1463,15 +1486,14 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.24
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_SHARED_DIR,
-         g_param_spec_string("shared-dir",
-                             "Shared directory",
-                             "Shared directory",
-                             g_get_user_special_dir(G_USER_DIRECTORY_PUBLIC_SHARE),
-                             G_PARAM_READWRITE |
-                             G_PARAM_CONSTRUCT |
-                             G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_SHARED_DIR,
+                                    g_param_spec_string("shared-dir",
+                                                        "Shared directory",
+                                                        "Shared directory",
+                                                        g_get_user_special_dir(G_USER_DIRECTORY_PUBLIC_SHARE),
+                                                        G_PARAM_READWRITE |
+                                                            G_PARAM_CONSTRUCT |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:share-dir-ro:
@@ -1480,15 +1502,14 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.28
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_SHARE_DIR_RO,
-         g_param_spec_boolean("share-dir-ro",
-                              "Share directory read-only",
-                              "Share directory read-only",
-                              FALSE,
-                              G_PARAM_READWRITE |
-                              G_PARAM_CONSTRUCT |
-                              G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_SHARE_DIR_RO,
+                                    g_param_spec_boolean("share-dir-ro",
+                                                         "Share directory read-only",
+                                                         "Share directory read-only",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE |
+                                                             G_PARAM_CONSTRUCT |
+                                                             G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:webdav-server:
@@ -1498,18 +1519,17 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.39
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_WEBDAV_SERVER,
-         g_param_spec_object("webdav-server",
-                             "WebDAV server",
-                             "PhodavServer object used for directory sharing",
+    g_object_class_install_property(gobject_class, PROP_WEBDAV_SERVER,
+                                    g_param_spec_object("webdav-server",
+                                                        "WebDAV server",
+                                                        "PhodavServer object used for directory sharing",
 #ifdef USE_PHODAV
-                             PHODAV_TYPE_SERVER,
+                                                        PHODAV_TYPE_SERVER,
 #else
-                             G_TYPE_OBJECT,
+                                                        G_TYPE_OBJECT,
 #endif
-                             G_PARAM_READABLE |
-                             G_PARAM_STATIC_STRINGS));
+                                                        G_PARAM_READABLE |
+                                                            G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:preferred-compression:
@@ -1519,15 +1539,14 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.29
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_PREF_COMPRESSION,
-         g_param_spec_enum("preferred-compression",
-                           "Preferred image compression algorithm",
-                           "Preferred image compression algorithm",
-                           SPICE_TYPE_IMAGE_COMPRESSION,
-                           SPICE_IMAGE_COMPRESSION_INVALID,
-                           G_PARAM_READWRITE |
-                           G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_PREF_COMPRESSION,
+                                    g_param_spec_enum("preferred-compression",
+                                                      "Preferred image compression algorithm",
+                                                      "Preferred image compression algorithm",
+                                                      SPICE_TYPE_IMAGE_COMPRESSION,
+                                                      SPICE_IMAGE_COMPRESSION_INVALID,
+                                                      G_PARAM_READWRITE |
+                                                          G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceSession:gl-scanout:
@@ -1538,19 +1557,18 @@ static void spice_session_class_init(SpiceSessionClass *klass)
      *
      * Since: 0.36
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_GL_SCANOUT,
-         g_param_spec_boolean("gl-scanout",
-                              "Enable GL scanout support",
-                              "Enable GL scanout support",
+    g_object_class_install_property(gobject_class, PROP_GL_SCANOUT,
+                                    g_param_spec_boolean("gl-scanout",
+                                                         "Enable GL scanout support",
+                                                         "Enable GL scanout support",
 #ifdef HAVE_EGL
-                              g_getenv("SPICE_DISABLE_GL_SCANOUT") == NULL,
-                              G_PARAM_CONSTRUCT |
+                                                         g_getenv("SPICE_DISABLE_GL_SCANOUT") == NULL,
+                                                         G_PARAM_CONSTRUCT |
 #else
-                              false,
+                                                         false,
 #endif
-                              G_PARAM_READWRITE |
-                              G_PARAM_STATIC_STRINGS));
+                                                             G_PARAM_READWRITE |
+                                                             G_PARAM_STATIC_STRINGS));
 }
 
 G_GNUC_INTERNAL
@@ -1576,7 +1594,8 @@ SpiceSession *spice_session_new(void)
     GError *err = NULL;
 
     priv->usb_manager = spice_usb_device_manager_get(self, &err);
-    if (err != NULL) {
+    if (err != NULL)
+    {
         SPICE_DEBUG("Could not initialize SpiceUsbDeviceManager - %s", err->message);
         g_clear_error(&err);
     }
@@ -1593,7 +1612,8 @@ SpiceSession *spice_session_new_from_session(SpiceSession *session)
     SpiceSession *copy;
     SpiceSessionPrivate *c;
 
-    if (s->client_provided_sockets) {
+    if (s->client_provided_sockets)
+    {
         g_warning("migration with client provided fd is not supported yet");
         return NULL;
     }
@@ -1750,7 +1770,8 @@ void spice_session_switching_disconnect(SpiceSession *self)
 
     /* disconnect/destroy all but main channel */
 
-    for (GList *l = s->channels; l != NULL; ) {
+    for (GList *l = s->channels; l != NULL;)
+    {
         SpiceChannel *channel = l->data;
         l = l->next;
 
@@ -1765,11 +1786,14 @@ void spice_session_switching_disconnect(SpiceSession *self)
     s->connection_id = 0;
 }
 
-#define SWAP_STR(x, y) G_STMT_START { \
-    gchar *tmp = x;                   \
-    x = y;                            \
-    y = tmp;                          \
-} G_STMT_END
+#define SWAP_STR(x, y)  \
+    G_STMT_START        \
+    {                   \
+        gchar *tmp = x; \
+        x = y;          \
+        y = tmp;        \
+    }                   \
+    G_STMT_END
 
 G_GNUC_INTERNAL
 void spice_session_start_migrating(SpiceSession *session,
@@ -1783,7 +1807,6 @@ void spice_session_start_migrating(SpiceSession *session,
     g_return_if_fail(s->migration != NULL);
     m = s->migration->priv;
     g_return_if_fail(m->migration_state == SPICE_SESSION_MIGRATION_CONNECTING);
-
 
     s->full_migration = full_migration;
     spice_session_set_migration_state(session, SPICE_SESSION_MIGRATION_MIGRATING);
@@ -1803,19 +1826,21 @@ void spice_session_start_migrating(SpiceSession *session,
 #undef SWAP_STR
 
 G_GNUC_INTERNAL
-SpiceChannel* spice_session_lookup_channel(SpiceSession *session, gint id, gint type)
+SpiceChannel *spice_session_lookup_channel(SpiceSession *session, gint id, gint type)
 {
     g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 
     SpiceSessionPrivate *s = session->priv;
     SpiceChannel *channel = NULL;
 
-    for (GList *l = s->channels; l != NULL; ) {
+    for (GList *l = s->channels; l != NULL;)
+    {
         channel = l->data;
         l = l->next;
 
         if (id == spice_channel_get_channel_id(channel) &&
-            type == spice_channel_get_channel_type(channel)) {
+            type == spice_channel_get_channel_type(channel))
+        {
             break;
         }
     }
@@ -1831,7 +1856,8 @@ void spice_session_abort_migration(SpiceSession *session)
 
     SpiceSessionPrivate *s = session->priv;
 
-    if (s->migration == NULL) {
+    if (s->migration == NULL)
+    {
         SPICE_DEBUG("no migration in progress");
         return;
     }
@@ -1840,7 +1866,8 @@ void spice_session_abort_migration(SpiceSession *session)
     if (s->migration_state != SPICE_SESSION_MIGRATION_MIGRATING)
         goto end;
 
-    for (GList *l = s->channels; l != NULL; ) {
+    for (GList *l = s->channels; l != NULL;)
+    {
         SpiceChannel *channel = l->data;
         l = l->next;
 
@@ -1848,10 +1875,10 @@ void spice_session_abort_migration(SpiceSession *session)
             continue;
 
         spice_channel_swap(channel,
-            spice_session_lookup_channel(s->migration,
-                                         spice_channel_get_channel_id(channel),
-                                         spice_channel_get_channel_type(channel)),
-                                         !s->full_migration);
+                           spice_session_lookup_channel(s->migration,
+                                                        spice_channel_get_channel_id(channel),
+                                                        spice_channel_get_channel_type(channel)),
+                           !s->full_migration);
     }
 
 end:
@@ -1860,8 +1887,9 @@ end:
     g_clear_object(&s->migration);
 
     s->migrate_wait_init = FALSE;
-    if (s->after_main_init) {
-        g_source_remove(s->after_main_init);
+    if (s->after_main_init)
+    {
+        g_spice_source_remove(s->after_main_init);
         s->after_main_init = 0;
     }
 
@@ -1887,13 +1915,15 @@ void spice_session_channel_migrate(SpiceSession *session, SpiceChannel *channel)
     c = spice_session_lookup_channel(s->migration, id, type);
     g_return_if_fail(c != NULL);
 
-    if (!g_queue_is_empty(&c->priv->xmit_queue) && s->full_migration) {
+    if (!g_queue_is_empty(&c->priv->xmit_queue) && s->full_migration)
+    {
         CHANNEL_DEBUG(channel, "mig channel xmit queue is not empty. type %s", c->priv->name);
     }
     spice_channel_swap(channel, c, !s->full_migration);
     s->migration_left = g_list_remove(s->migration_left, channel);
 
-    if (g_list_length(s->migration_left) == 0) {
+    if (g_list_length(s->migration_left) == 0)
+    {
         CHANNEL_DEBUG(channel, "migration: all channel migrated, success");
         session_disconnect(s->migration, FALSE);
         g_clear_object(&s->migration);
@@ -1908,7 +1938,8 @@ static gboolean after_main_init(gpointer data)
     SpiceSessionPrivate *s = self->priv;
     GList *l;
 
-    for (l = s->migration_left; l != NULL; ) {
+    for (l = s->migration_left; l != NULL;)
+    {
         SpiceChannel *channel = l->data;
         l = l->next;
 
@@ -1936,7 +1967,7 @@ gboolean spice_session_migrate_after_main_init(SpiceSession *self)
     g_return_val_if_fail(s->after_main_init == 0, FALSE);
 
     s->migrate_wait_init = FALSE;
-    s->after_main_init = g_idle_add(after_main_init, self);
+    s->after_main_init = g_spice_idle_add(after_main_init, self);
 
     return TRUE;
 }
@@ -1955,11 +1986,13 @@ void spice_session_migrate_end(SpiceSession *self)
     g_return_if_fail(g_list_length(s->migration_left) != 0);
 
     /* disconnect and reset all channels */
-    for (GList *l = s->migration_left; l != NULL; ) {
+    for (GList *l = s->migration_left; l != NULL;)
+    {
         SpiceChannel *channel = l->data;
         l = l->next;
 
-        if (!SPICE_IS_MAIN_CHANNEL(channel)) {
+        if (!SPICE_IS_MAIN_CHANNEL(channel))
+        {
             /* freeze other channels */
             channel->priv->state = SPICE_CHANNEL_STATE_MIGRATING;
         }
@@ -1967,7 +2000,8 @@ void spice_session_migrate_end(SpiceSession *self)
         /* reset for migration, disconnect */
         spice_channel_reset(channel, TRUE);
 
-        if (SPICE_IS_MAIN_CHANNEL(channel)) {
+        if (SPICE_IS_MAIN_CHANNEL(channel))
+        {
             /* migrate main to target, so we can start talking */
             spice_session_channel_migrate(self, channel);
         }
@@ -2029,7 +2063,7 @@ void spice_session_disconnect(SpiceSession *session)
         return;
 
     g_object_ref(session);
-    s->disconnecting = g_idle_add((GSourceFunc)session_disconnect_idle, session);
+    s->disconnecting = g_spice_idle_add((GSourceFunc)session_disconnect_idle, session);
 }
 
 /**
@@ -2068,9 +2102,11 @@ gboolean spice_session_has_channel_type(SpiceSession *session, gint type)
 
     s = session->priv;
 
-    for (GList *l = s->channels; l != NULL; l = l->next) {
+    for (GList *l = s->channels; l != NULL; l = l->next)
+    {
         SpiceChannel *channel = l->data;
-        if (spice_channel_get_channel_type(channel) == type) {
+        if (spice_channel_get_channel_type(channel) == type)
+        {
             return TRUE;
         }
     }
@@ -2082,7 +2118,8 @@ gboolean spice_session_has_channel_type(SpiceSession *session, gint type)
 
 typedef struct spice_open_host spice_open_host;
 
-struct spice_open_host {
+struct spice_open_host
+{
     struct coroutine *from;
     SpiceSession *session;
     SpiceChannel *channel;
@@ -2103,7 +2140,8 @@ static void socket_client_connect_ready(GObject *source_object, GAsyncResult *re
 
     CHANNEL_DEBUG(open_host->channel, "connect ready");
     connection = g_socket_client_connect_finish(client, result, &open_host->error);
-    if (connection == NULL) {
+    if (connection == NULL)
+    {
         g_warn_if_fail(open_host->error != NULL);
         goto end;
     }
@@ -2137,13 +2175,15 @@ static void proxy_lookup_ready(GObject *source_object, GAsyncResult *result,
     SPICE_DEBUG("proxy lookup ready");
     addresses = g_resolver_lookup_by_name_finish(G_RESOLVER(source_object),
                                                  result, &open_host->error);
-    if (addresses == NULL || open_host->error) {
+    if (addresses == NULL || open_host->error)
+    {
         g_prefix_error(&open_host->error, "SPICE proxy: ");
         coroutine_yieldto(open_host->from, NULL);
         return;
     }
 
-    for (it = addresses; it != NULL; it = it->next) {
+    for (it = addresses; it != NULL; it = it->next)
+    {
         address = g_proxy_address_new(G_INET_ADDRESS(it->data),
                                       spice_uri_get_port(open_host->proxy),
                                       spice_uri_get_scheme(open_host->proxy),
@@ -2173,20 +2213,25 @@ static gboolean open_host_idle_cb(gpointer data)
 
     s = open_host->session->priv;
     open_host->proxy = s->proxy;
-    if (open_host->error != NULL) {
+    if (open_host->error != NULL)
+    {
         coroutine_yieldto(open_host->from, NULL);
         return FALSE;
     }
 
-    if (open_host->proxy) {
+    if (open_host->proxy)
+    {
         g_resolver_lookup_by_name_async(g_resolver_get_default(),
                                         spice_uri_get_hostname(open_host->proxy),
                                         open_host->cancellable,
                                         proxy_lookup_ready, open_host);
-    } else {
+    }
+    else
+    {
         GSocketConnectable *address = NULL;
 
-        if (s->unix_path) {
+        if (s->unix_path)
+        {
             SPICE_DEBUG("open unix path %s", s->unix_path);
 #ifdef G_OS_UNIX
             address = G_SOCKET_CONNECTABLE(g_unix_socket_address_new(s->unix_path));
@@ -2194,12 +2239,15 @@ static gboolean open_host_idle_cb(gpointer data)
             g_set_error_literal(&open_host->error, SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
                                 "Unix path unsupported on this platform");
 #endif
-        } else {
+        }
+        else
+        {
             SPICE_DEBUG("open host %s:%d", s->host, open_host->port);
             address = g_network_address_parse(s->host, open_host->port, &open_host->error);
         }
 
-        if (address == NULL || open_host->error != NULL) {
+        if (address == NULL || open_host->error != NULL)
+        {
             coroutine_yieldto(open_host->from, NULL);
             return FALSE;
         }
@@ -2208,7 +2256,8 @@ static gboolean open_host_idle_cb(gpointer data)
         g_object_unref(address);
     }
 
-    if (open_host->proxy != NULL) {
+    if (open_host->proxy != NULL)
+    {
         gchar *str = spice_uri_to_string(open_host->proxy);
         SPICE_DEBUG("(with proxy %s)", str);
         g_free(str);
@@ -2221,14 +2270,16 @@ static gboolean open_host_idle_cb(gpointer data)
 
 /* coroutine context */
 G_GNUC_INTERNAL
-GSocketConnection* spice_session_channel_open_host(SpiceSession *session, SpiceChannel *channel,
+GSocketConnection *spice_session_channel_open_host(SpiceSession *session, SpiceChannel *channel,
                                                    gboolean *use_tls, GError **error)
 {
     g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 
     SpiceSessionPrivate *s = session->priv;
     SpiceChannelPrivate *c = channel->priv;
-    spice_open_host open_host = { 0, };
+    spice_open_host open_host = {
+        0,
+    };
     gchar *port, *endptr;
 
     // FIXME: make open_host() cancellable
@@ -2241,29 +2292,38 @@ GSocketConnection* spice_session_channel_open_host(SpiceSession *session, SpiceC
         spice_strv_contains(s->secure_channels, name))
         *use_tls = TRUE;
 
-    if (s->unix_path) {
-        if (*use_tls) {
+    if (s->unix_path)
+    {
+        if (*use_tls)
+        {
             CHANNEL_DEBUG(channel, "No TLS for Unix sockets");
             return NULL;
         }
-    } else {
+    }
+    else
+    {
         port = *use_tls ? s->tls_port : s->port;
-        if (port == NULL) {
+        if (port == NULL)
+        {
             SPICE_DEBUG("Missing port value, not attempting %s connection.",
-                    *use_tls?"TLS":"unencrypted");
+                        *use_tls ? "TLS" : "unencrypted");
             return NULL;
         }
 
         open_host.port = strtol(port, &endptr, 10);
         if (*port == '\0' || *endptr != '\0' ||
-            open_host.port <= 0 || open_host.port > G_MAXUINT16) {
+            open_host.port <= 0 || open_host.port > G_MAXUINT16)
+        {
             g_warning("Invalid port value %s", port);
             return NULL;
         }
     }
-    if (*use_tls) {
+    if (*use_tls)
+    {
         CHANNEL_DEBUG(channel, "Using TLS, port %d", open_host.port);
-    } else {
+    }
+    else
+    {
         CHANNEL_DEBUG(channel, "Using plain text, port %d", open_host.port);
     }
 
@@ -2271,14 +2331,17 @@ GSocketConnection* spice_session_channel_open_host(SpiceSession *session, SpiceC
     g_socket_client_set_enable_proxy(open_host.client, s->proxy != NULL);
     g_socket_client_set_timeout(open_host.client, SOCKET_TIMEOUT);
 
-    g_idle_add(open_host_idle_cb, &open_host);
+    g_spice_idle_add(open_host_idle_cb, &open_host);
     /* switch to main loop and wait for connection */
     coroutine_yield(NULL);
 
-    if (open_host.error != NULL) {
+    if (open_host.error != NULL)
+    {
         CHANNEL_DEBUG(channel, "open host: %s", open_host.error->message);
         g_propagate_error(error, open_host.error);
-    } else if (open_host.connection != NULL) {
+    }
+    else if (open_host.connection != NULL)
+    {
         GSocket *socket;
         socket = g_socket_connection_get_socket(open_host.connection);
         g_socket_set_timeout(socket, 0);
@@ -2291,8 +2354,7 @@ GSocketConnection* spice_session_channel_open_host(SpiceSession *session, SpiceC
         struct tcp_keepalive keepalive = {
             TRUE,
             30 * 1000,
-            5 * 1000
-        };
+            5 * 1000};
         DWORD written;
         WSAIoctl(g_socket_get_fd(socket), SIO_KEEPALIVE_VALS, &keepalive, sizeof(keepalive),
                  NULL, 0, &written, NULL, NULL);
@@ -2307,7 +2369,6 @@ GSocketConnection* spice_session_channel_open_host(SpiceSession *session, SpiceC
     return open_host.connection;
 }
 
-
 G_GNUC_INTERNAL
 void spice_session_channel_new(SpiceSession *session, SpiceChannel *channel)
 {
@@ -2318,7 +2379,8 @@ void spice_session_channel_new(SpiceSession *session, SpiceChannel *channel)
 
     s->channels = g_list_prepend(s->channels, channel);
 
-    if (SPICE_IS_MAIN_CHANNEL(channel)) {
+    if (SPICE_IS_MAIN_CHANNEL(channel))
+    {
         gboolean all = spice_strv_contains(s->disable_effects, "all");
 
         g_object_set(channel,
@@ -2329,7 +2391,9 @@ void spice_session_channel_new(SpiceSession *session, SpiceChannel *channel)
 
         CHANNEL_DEBUG(channel, "new main channel, switching");
         s->cmain = channel;
-    } else if (SPICE_IS_PLAYBACK_CHANNEL(channel)) {
+    }
+    else if (SPICE_IS_PLAYBACK_CHANNEL(channel))
+    {
         g_warn_if_fail(s->playback_channel == NULL);
         s->playback_channel = SPICE_PLAYBACK_CHANNEL(channel);
     }
@@ -2342,7 +2406,8 @@ static void channel_finally_destroyed(gpointer data, GObject *channel)
     SpiceSession *session = SPICE_SESSION(data);
     SpiceSessionPrivate *s = session->priv;
     s->channels_destroying--;
-    if (s->channels == NULL && (s->channels_destroying == 0)) {
+    if (s->channels == NULL && (s->channels_destroying == 0))
+    {
         g_signal_emit(session, signals[SPICE_SESSION_DISCONNECTED], 0);
     }
     g_object_unref(session);
@@ -2359,14 +2424,16 @@ static void spice_session_channel_destroy(SpiceSession *session, SpiceChannel *c
     if (s->migration_left)
         s->migration_left = g_list_remove(s->migration_left, channel);
 
-    for (l = s->channels; l != NULL; l = l->next) {
+    for (l = s->channels; l != NULL; l = l->next)
+    {
         if (l->data == channel)
             break;
     }
 
     g_return_if_fail(l != NULL);
 
-    if (channel == s->cmain) {
+    if (channel == s->cmain)
+    {
         CHANNEL_DEBUG(channel, "the session lost the main channel");
         s->cmain = NULL;
     }
@@ -2430,10 +2497,11 @@ void spice_session_set_mm_time(SpiceSession *session, guint32 time)
 
     old_time = spice_session_get_mm_time(session);
 
-    s->mm_time_offset = g_get_monotonic_time() - time * (guint64) 1000;
+    s->mm_time_offset = g_get_monotonic_time() - time * (guint64)1000;
     SPICE_DEBUG("set mm time: %u", time);
     if (spice_mmtime_diff(time, old_time + MM_TIME_DIFF_RESET_THRESH) > 0 ||
-        spice_mmtime_diff(time, old_time) < 0) {
+        spice_mmtime_diff(time, old_time) < 0)
+    {
         SPICE_DEBUG("%s: mm-time-reset, old %u, new %u", __FUNCTION__, old_time, time);
         g_coroutine_signal_emit(session, signals[SPICE_SESSION_MM_TIME_RESET], 0);
     }
@@ -2504,7 +2572,7 @@ void spice_session_set_migration_state(SpiceSession *session, SpiceSessionMigrat
 }
 
 G_GNUC_INTERNAL
-const gchar* spice_session_get_username(SpiceSession *session)
+const gchar *spice_session_get_username(SpiceSession *session)
 {
     g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 
@@ -2514,7 +2582,7 @@ const gchar* spice_session_get_username(SpiceSession *session)
 }
 
 G_GNUC_INTERNAL
-const gchar* spice_session_get_password(SpiceSession *session)
+const gchar *spice_session_get_password(SpiceSession *session)
 {
     g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 
@@ -2524,7 +2592,7 @@ const gchar* spice_session_get_password(SpiceSession *session)
 }
 
 G_GNUC_INTERNAL
-const gchar* spice_session_get_host(SpiceSession *session)
+const gchar *spice_session_get_host(SpiceSession *session)
 {
     g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 
@@ -2534,7 +2602,7 @@ const gchar* spice_session_get_host(SpiceSession *session)
 }
 
 G_GNUC_INTERNAL
-const gchar* spice_session_get_cert_subject(SpiceSession *session)
+const gchar *spice_session_get_cert_subject(SpiceSession *session)
 {
     g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 
@@ -2544,7 +2612,7 @@ const gchar* spice_session_get_cert_subject(SpiceSession *session)
 }
 
 G_GNUC_INTERNAL
-const gchar* spice_session_get_ciphers(SpiceSession *session)
+const gchar *spice_session_get_ciphers(SpiceSession *session)
 {
     g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 
@@ -2554,7 +2622,7 @@ const gchar* spice_session_get_ciphers(SpiceSession *session)
 }
 
 G_GNUC_INTERNAL
-const gchar* spice_session_get_ca_file(SpiceSession *session)
+const gchar *spice_session_get_ca_file(SpiceSession *session)
 {
     g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 
@@ -2591,11 +2659,13 @@ void spice_session_set_caches_hints(SpiceSession *session,
 
     /* TODO: when setting cache and window size, we should consider the client's
      *       available memory and the number of display channels */
-    if (s->images_cache_size == 0) {
+    if (s->images_cache_size == 0)
+    {
         s->images_cache_size = IMAGES_CACHE_SIZE_DEFAULT;
     }
 
-    if (s->glz_window_size == 0) {
+    if (s->glz_window_size == 0)
+    {
         s->glz_window_size = MIN(MAX_GLZ_WINDOW_SIZE_DEFAULT, pci_ram_size / 2);
         s->glz_window_size = MAX(MIN_GLZ_WINDOW_SIZE_DEFAULT, s->glz_window_size);
     }
@@ -2642,9 +2712,12 @@ void spice_session_sync_playback_latency(SpiceSession *session)
     SpiceSessionPrivate *s = session->priv;
 
     if (s->playback_channel &&
-        spice_playback_channel_is_active(s->playback_channel)) {
+        spice_playback_channel_is_active(s->playback_channel))
+    {
         spice_playback_channel_sync_latency(s->playback_channel);
-    } else {
+    }
+    else
+    {
         SPICE_DEBUG("%s: not implemented when there isn't audio playback", __FUNCTION__);
     }
 }
@@ -2657,7 +2730,7 @@ gboolean spice_session_is_playback_active(SpiceSession *session)
     SpiceSessionPrivate *s = session->priv;
 
     return (s->playback_channel &&
-        spice_playback_channel_is_active(s->playback_channel));
+            spice_playback_channel_is_active(s->playback_channel));
 }
 
 G_GNUC_INTERNAL
@@ -2668,15 +2741,18 @@ guint32 spice_session_get_playback_latency(SpiceSession *session)
     SpiceSessionPrivate *s = session->priv;
 
     if (s->playback_channel &&
-        spice_playback_channel_is_active(s->playback_channel)) {
+        spice_playback_channel_is_active(s->playback_channel))
+    {
         return spice_playback_channel_get_latency(s->playback_channel);
-    } else {
+    }
+    else
+    {
         SPICE_DEBUG("%s: not implemented when there isn't audio playback", __FUNCTION__);
         return 0;
     }
 }
 
-static const gchar* spice_session_get_shared_dir(SpiceSession *session)
+static const gchar *spice_session_get_shared_dir(SpiceSession *session)
 {
     g_return_val_if_fail(SPICE_IS_SESSION(session), NULL);
 
@@ -2695,7 +2771,8 @@ static void spice_session_set_shared_dir(SpiceSession *session, const gchar *dir
     s->shared_dir = g_strdup(dir);
 
 #ifdef HAVE_PHODAV_VIRTUAL
-    if (s->webdav == NULL) {
+    if (s->webdav == NULL)
+    {
         return;
     }
 
@@ -2707,19 +2784,18 @@ static void spice_session_set_shared_dir(SpiceSession *session, const gchar *dir
 }
 
 G_GNUC_INTERNAL
-const gchar* spice_audio_data_mode_to_string(gint mode)
+const gchar *spice_audio_data_mode_to_string(gint mode)
 {
     G_GNUC_BEGIN_IGNORE_DEPRECATIONS
     static const char *str[] = {
-        [ SPICE_AUDIO_DATA_MODE_INVALID ] = "invalid",
-        [ SPICE_AUDIO_DATA_MODE_RAW ] = "raw",
-        [ SPICE_AUDIO_DATA_MODE_CELT_0_5_1 ] = "celt",
-        [ SPICE_AUDIO_DATA_MODE_OPUS ] = "opus",
+        [SPICE_AUDIO_DATA_MODE_INVALID] = "invalid",
+        [SPICE_AUDIO_DATA_MODE_RAW] = "raw",
+        [SPICE_AUDIO_DATA_MODE_CELT_0_5_1] = "celt",
+        [SPICE_AUDIO_DATA_MODE_OPUS] = "opus",
     };
     G_GNUC_END_IGNORE_DEPRECATIONS
     return (mode >= 0 && mode < G_N_ELEMENTS(str)) ? str[mode] : "unknown audio codec";
 }
-
 
 /**
  * spice_session_get_proxy_uri:
@@ -2766,7 +2842,8 @@ SpiceAudio *spice_audio_get(SpiceSession *session, GMainContext *context)
 
     g_mutex_lock(&mutex);
     self = session->priv->audio_manager;
-    if (self == NULL) {
+    if (self == NULL)
+    {
         self = spice_audio_new_priv(session, context, NULL);
         session->priv->audio_manager = self;
     }
@@ -2800,7 +2877,8 @@ SpiceUsbDeviceManager *spice_usb_device_manager_get(SpiceSession *session,
 
     g_mutex_lock(&mutex);
     self = session->priv->usb_manager;
-    if (self == NULL) {
+    if (self == NULL)
+    {
         self = g_initable_new(SPICE_TYPE_USB_DEVICE_MANAGER, NULL, err,
                               "session", session, NULL);
         session->priv->usb_manager = self;
@@ -2835,7 +2913,7 @@ gboolean spice_session_get_smartcard_enabled(SpiceSession *session)
 }
 
 G_GNUC_INTERNAL
-PhodavServer* spice_session_get_webdav_server(SpiceSession *session)
+PhodavServer *spice_session_get_webdav_server(SpiceSession *session)
 {
     SpiceSessionPrivate *priv;
 
@@ -2848,7 +2926,8 @@ PhodavServer* spice_session_get_webdav_server(SpiceSession *session)
     const gchar *shared_dir = spice_session_get_shared_dir(session);
     /* with HAVE_PHODAV_VIRTUAL, PhodavServer must be created even if shared_dir is NULL */
 #ifndef HAVE_PHODAV_VIRTUAL
-    if (shared_dir == NULL) {
+    if (shared_dir == NULL)
+    {
         SPICE_DEBUG("No shared dir set, not creating webdav server");
         return NULL;
     }
@@ -2856,7 +2935,8 @@ PhodavServer* spice_session_get_webdav_server(SpiceSession *session)
 
     g_mutex_lock(&mutex);
 
-    if (priv->webdav == NULL) {
+    if (priv->webdav == NULL)
+    {
 #ifdef HAVE_PHODAV_VIRTUAL
         PhodavVirtualDir *root = phodav_virtual_dir_new_root();
         priv->webdav = phodav_server_new_for_root_file(G_FILE(root));
@@ -2869,15 +2949,15 @@ PhodavServer* spice_session_get_webdav_server(SpiceSession *session)
         priv->webdav = phodav_server_new(shared_dir);
 #endif
 
-        g_object_bind_property(session,  "share-dir-ro",
+        g_object_bind_property(session, "share-dir-ro",
                                priv->webdav, "read-only",
-                               G_BINDING_SYNC_CREATE|G_BINDING_BIDIRECTIONAL);
+                               G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 
         /* with HAVE_PHODAV_VIRTUAL, the update is done in spice_session_set_shared_dir() */
 #ifndef HAVE_PHODAV_VIRTUAL
-        g_object_bind_property(session,  "shared-dir",
+        g_object_bind_property(session, "shared-dir",
                                priv->webdav, "root",
-                               G_BINDING_SYNC_CREATE|G_BINDING_BIDIRECTIONAL);
+                               G_BINDING_SYNC_CREATE | G_BINDING_BIDIRECTIONAL);
 #endif
     }
 

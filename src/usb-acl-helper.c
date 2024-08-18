@@ -26,7 +26,8 @@
 
 #include "usb-acl-helper.h"
 
-struct _SpiceUsbAclHelperPrivate {
+struct _SpiceUsbAclHelperPrivate
+{
     GTask *task;
     GIOChannel *in_ch;
     GIOChannel *out_ch;
@@ -65,9 +66,9 @@ static void spice_usb_acl_helper_finalize(GObject *gobject)
 
 static void spice_usb_acl_helper_class_init(SpiceUsbAclHelperClass *klass)
 {
-    GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
+    GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
 
-    gobject_class->finalize     = spice_usb_acl_helper_finalize;
+    gobject_class->finalize = spice_usb_acl_helper_finalize;
 }
 
 /* ------------------------------------------------------------------ */
@@ -76,13 +77,13 @@ static void spice_usb_acl_helper_class_init(SpiceUsbAclHelperClass *klass)
 static void async_result_set_cancelled(GTask *task)
 {
     g_task_return_new_error(task,
-                G_IO_ERROR, G_IO_ERROR_CANCELLED,
-                "Setting USB device node ACL cancelled");
+                            G_IO_ERROR, G_IO_ERROR_CANCELLED,
+                            "Setting USB device node ACL cancelled");
 }
 
-static gboolean cb_out_watch(GIOChannel    *channel,
-                             GIOCondition   cond,
-                             gpointer      *user_data)
+static gboolean cb_out_watch(GIOChannel *channel,
+                             GIOCondition cond,
+                             gpointer *user_data)
 {
     SpiceUsbAclHelper *self = SPICE_USB_ACL_HELPER(user_data);
     SpiceUsbAclHelperPrivate *priv = self->priv;
@@ -99,32 +100,38 @@ static gboolean cb_out_watch(GIOChannel    *channel,
     g_return_val_if_fail(channel == priv->out_ch, FALSE);
 
     status = g_io_channel_read_line(priv->out_ch, &string, &size, NULL, &err);
-    switch (status) {
-        case G_IO_STATUS_NORMAL:
-            string[strlen(string) - 1] = 0;
-            if (!strcmp(string, "SUCCESS")) {
-                success = TRUE;
-                g_task_return_boolean(priv->task, TRUE);
-            } else if (!strcmp(string, "CANCELED")) {
-                async_result_set_cancelled(priv->task);
-            } else {
-                g_task_return_new_error(priv->task,
-                            SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
-                            "Error setting USB device node ACL: '%s'",
-                            string);
-            }
-            g_free(string);
-            break;
-        case G_IO_STATUS_ERROR:
-            g_task_return_error(priv->task, err);
-            break;
-        case G_IO_STATUS_EOF:
+    switch (status)
+    {
+    case G_IO_STATUS_NORMAL:
+        string[strlen(string) - 1] = 0;
+        if (!strcmp(string, "SUCCESS"))
+        {
+            success = TRUE;
+            g_task_return_boolean(priv->task, TRUE);
+        }
+        else if (!strcmp(string, "CANCELED"))
+        {
+            async_result_set_cancelled(priv->task);
+        }
+        else
+        {
             g_task_return_new_error(priv->task,
-                        SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
-                        "Unexpected EOF reading from acl helper stdout");
-            break;
-        case G_IO_STATUS_AGAIN:
-            return TRUE; /* Wait for more input */
+                                    SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
+                                    "Error setting USB device node ACL: '%s'",
+                                    string);
+        }
+        g_free(string);
+        break;
+    case G_IO_STATUS_ERROR:
+        g_task_return_error(priv->task, err);
+        break;
+    case G_IO_STATUS_EOF:
+        g_task_return_new_error(priv->task,
+                                SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
+                                "Unexpected EOF reading from acl helper stdout");
+        break;
+    case G_IO_STATUS_AGAIN:
+        return TRUE; /* Wait for more input */
     }
 
     g_cancellable_disconnect(priv->cancellable, priv->cancellable_id);
@@ -183,32 +190,35 @@ void spice_usb_acl_helper_open_acl_async(SpiceUsbAclHelper *self,
     gsize bytes_written;
     const gchar *acl_helper = g_getenv("SPICE_USB_ACL_BINARY");
     if (acl_helper == NULL)
-        acl_helper = ACL_HELPER_PATH"/spice-client-glib-usb-acl-helper";
-    gchar *argv[] = { (char*)acl_helper, NULL };
+        acl_helper = ACL_HELPER_PATH "/spice-client-glib-usb-acl-helper";
+    gchar *argv[] = {(char *)acl_helper, NULL};
     gint in, out;
     gchar buf[128];
 
     task = g_task_new(self, cancellable, callback, user_data);
 
-    if (priv->out_ch) {
+    if (priv->out_ch)
+    {
         g_task_return_new_error(task,
-                            SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
-                            "Error acl-helper already has an acl open");
+                                SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
+                                "Error acl-helper already has an acl open");
         goto done;
     }
 
-    if (g_cancellable_set_error_if_cancelled(cancellable, &err)) {
+    if (g_cancellable_set_error_if_cancelled(cancellable, &err))
+    {
         g_task_return_error(task, err);
         goto done;
     }
 
     if (!g_spawn_async_with_pipes(NULL, argv, NULL,
-                           G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH,
-                           NULL, NULL, &helper_pid, &in, &out, NULL, &err)) {
+                                  G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH,
+                                  NULL, NULL, &helper_pid, &in, &out, NULL, &err))
+    {
         g_task_return_error(task, err);
         goto done;
     }
-    g_child_watch_add(helper_pid, helper_child_watch_cb, NULL);
+    g_spice_child_watch_add(helper_pid, helper_child_watch_cb, NULL);
 
     priv->in_ch = g_io_channel_unix_new(in);
     g_io_channel_set_close_on_unref(priv->in_ch, TRUE);
@@ -216,7 +226,8 @@ void spice_usb_acl_helper_open_acl_async(SpiceUsbAclHelper *self,
     priv->out_ch = g_io_channel_unix_new(out);
     g_io_channel_set_close_on_unref(priv->out_ch, TRUE);
     status = g_io_channel_set_flags(priv->out_ch, G_IO_FLAG_NONBLOCK, &err);
-    if (status != G_IO_STATUS_NORMAL) {
+    if (status != G_IO_STATUS_NORMAL)
+    {
         g_task_return_error(task, err);
         goto done;
     }
@@ -224,24 +235,27 @@ void spice_usb_acl_helper_open_acl_async(SpiceUsbAclHelper *self,
     snprintf(buf, sizeof(buf), "%d %d\n", busnum, devnum);
     status = g_io_channel_write_chars(priv->in_ch, buf, -1,
                                       &bytes_written, &err);
-    if (status != G_IO_STATUS_NORMAL) {
+    if (status != G_IO_STATUS_NORMAL)
+    {
         g_task_return_error(task, err);
         goto done;
     }
     status = g_io_channel_flush(priv->in_ch, &err);
-    if (status != G_IO_STATUS_NORMAL) {
+    if (status != G_IO_STATUS_NORMAL)
+    {
         g_task_return_error(task, err);
         goto done;
     }
 
     priv->task = task;
-    if (cancellable) {
+    if (cancellable)
+    {
         priv->cancellable = cancellable;
         priv->cancellable_id = g_cancellable_connect(cancellable,
                                                      G_CALLBACK(cancelled_cb),
                                                      self, NULL);
     }
-    g_io_add_watch(priv->out_ch, G_IO_IN|G_IO_HUP,
+    g_io_add_watch(priv->out_ch, G_IO_IN | G_IO_HUP,
                    (GIOFunc)cb_out_watch, g_object_ref(self));
     return;
 

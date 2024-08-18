@@ -43,31 +43,30 @@ struct _SpiceVmcInputStreamClass
     GInputStreamClass parent_class;
 };
 
-static gssize   spice_vmc_input_stream_read        (GInputStream        *stream,
-                                                    void                *buffer,
-                                                    gsize                count,
-                                                    GCancellable        *cancellable,
-                                                    GError             **error);
-static void     spice_vmc_input_stream_read_async  (GInputStream        *stream,
-                                                    void                *buffer,
-                                                    gsize                count,
-                                                    int                  io_priority,
-                                                    GCancellable        *cancellable,
-                                                    GAsyncReadyCallback  callback,
-                                                    gpointer             user_data);
-static gssize   spice_vmc_input_stream_read_finish (GInputStream        *stream,
-                                                    GAsyncResult        *result,
-                                                    GError             **error);
-static gssize   spice_vmc_input_stream_skip        (GInputStream        *stream,
-                                                    gsize                count,
-                                                    GCancellable        *cancellable,
-                                                    GError             **error);
-static gboolean spice_vmc_input_stream_close       (GInputStream        *stream,
-                                                    GCancellable        *cancellable,
-                                                    GError             **error);
+static gssize spice_vmc_input_stream_read(GInputStream *stream,
+                                          void *buffer,
+                                          gsize count,
+                                          GCancellable *cancellable,
+                                          GError **error);
+static void spice_vmc_input_stream_read_async(GInputStream *stream,
+                                              void *buffer,
+                                              gsize count,
+                                              int io_priority,
+                                              GCancellable *cancellable,
+                                              GAsyncReadyCallback callback,
+                                              gpointer user_data);
+static gssize spice_vmc_input_stream_read_finish(GInputStream *stream,
+                                                 GAsyncResult *result,
+                                                 GError **error);
+static gssize spice_vmc_input_stream_skip(GInputStream *stream,
+                                          gsize count,
+                                          GCancellable *cancellable,
+                                          GError **error);
+static gboolean spice_vmc_input_stream_close(GInputStream *stream,
+                                             GCancellable *cancellable,
+                                             GError **error);
 
 G_DEFINE_TYPE(SpiceVmcInputStream, spice_vmc_input_stream, G_TYPE_INPUT_STREAM)
-
 
 static void
 spice_vmc_input_stream_class_init(SpiceVmcInputStreamClass *klass)
@@ -97,7 +96,8 @@ spice_vmc_input_stream_new(void)
     return self;
 }
 
-typedef struct _complete_in_idle_cb_data {
+typedef struct _complete_in_idle_cb_data
+{
     GTask *task;
     gssize pos;
 } complete_in_idle_cb_data;
@@ -109,8 +109,8 @@ complete_in_idle_cb(gpointer user_data)
 
     g_task_return_int(data->task, data->pos);
 
-    g_object_unref (data->task);
-    g_free (data);
+    g_object_unref(data->task);
+    g_free(data);
 
     return FALSE;
 }
@@ -133,7 +133,8 @@ spice_vmc_input_stream_co_data(SpiceVmcInputStream *self,
 
     self->coroutine = coroutine_self();
 
-    while (size > 0) {
+    while (size > 0)
+    {
         complete_in_idle_cb_data *cb_data;
 
         SPICE_DEBUG("spicevmc co_data %p", self->task);
@@ -151,7 +152,8 @@ spice_vmc_input_stream_co_data(SpiceVmcInputStream *self,
         self->pos += min;
 
         SPICE_DEBUG("spicevmc co_data complete: %" G_GSIZE_FORMAT
-                    "/%" G_GSIZE_FORMAT, self->pos, self->count);
+                    "/%" G_GSIZE_FORMAT,
+                    self->pos, self->count);
 
         if (self->all && min > 0 && self->pos != self->count)
             continue;
@@ -159,10 +161,10 @@ spice_vmc_input_stream_co_data(SpiceVmcInputStream *self,
         /* Let's deal with the task complete in idle by ourselves, as GTask
          * heuristic only makes sense in a non-coroutine case.
          */
-        cb_data = g_new(complete_in_idle_cb_data , 1);
+        cb_data = g_new(complete_in_idle_cb_data, 1);
         cb_data->task = g_object_ref(self->task);
         cb_data->pos = self->pos;
-        g_idle_add(complete_in_idle_cb, cb_data);
+        g_spice_idle_add(complete_in_idle_cb, cb_data);
 
         g_clear_object(&self->task);
     }
@@ -188,13 +190,13 @@ read_cancelled(GCancellable *cancellable,
 }
 
 G_GNUC_INTERNAL void
-spice_vmc_input_stream_read_all_async(GInputStream        *stream,
-                                      void                *buffer,
-                                      gsize                count,
-                                      int                  io_priority,
-                                      GCancellable        *cancellable,
-                                      GAsyncReadyCallback  callback,
-                                      gpointer             user_data)
+spice_vmc_input_stream_read_all_async(GInputStream *stream,
+                                      void *buffer,
+                                      gsize count,
+                                      int io_priority,
+                                      GCancellable *cancellable,
+                                      GAsyncReadyCallback callback,
+                                      gpointer user_data)
 {
     SpiceVmcInputStream *self = SPICE_VMC_INPUT_STREAM(stream);
     GTask *task;
@@ -209,7 +211,8 @@ spice_vmc_input_stream_read_all_async(GInputStream        *stream,
                       cancellable,
                       callback,
                       user_data);
-    if (count == 0) {
+    if (count == 0)
+    {
         g_task_return_int(task, 0);
         g_object_unref(task);
         return;
@@ -234,21 +237,22 @@ spice_vmc_input_stream_read_all_finish(GInputStream *stream,
 
     g_return_val_if_fail(g_task_is_valid(task, self), -1);
     cancel = g_task_get_cancellable(task);
-    if (!g_cancellable_is_cancelled(cancel)) {
-         g_cancellable_disconnect(cancel, self->cancel_id);
-         self->cancel_id = 0;
+    if (!g_cancellable_is_cancelled(cancel))
+    {
+        g_cancellable_disconnect(cancel, self->cancel_id);
+        self->cancel_id = 0;
     }
     return g_task_propagate_int(task, error);
 }
 
 static void
-spice_vmc_input_stream_read_async(GInputStream        *stream,
-                                  void                *buffer,
-                                  gsize                count,
-                                  int                  io_priority,
-                                  GCancellable        *cancellable,
-                                  GAsyncReadyCallback  callback,
-                                  gpointer             user_data)
+spice_vmc_input_stream_read_async(GInputStream *stream,
+                                  void *buffer,
+                                  gsize count,
+                                  int io_priority,
+                                  GCancellable *cancellable,
+                                  GAsyncReadyCallback callback,
+                                  gpointer user_data)
 {
     SpiceVmcInputStream *self = SPICE_VMC_INPUT_STREAM(stream);
     GTask *task;
@@ -282,36 +286,37 @@ spice_vmc_input_stream_read_finish(GInputStream *stream,
     g_return_val_if_fail(g_task_is_valid(task, self), -1);
 
     cancel = g_task_get_cancellable(task);
-    if (!g_cancellable_is_cancelled(cancel)) {
-         g_cancellable_disconnect(cancel, self->cancel_id);
-         self->cancel_id = 0;
+    if (!g_cancellable_is_cancelled(cancel))
+    {
+        g_cancellable_disconnect(cancel, self->cancel_id);
+        self->cancel_id = 0;
     }
     return g_task_propagate_int(task, error);
 }
 
 static gssize
-spice_vmc_input_stream_read(GInputStream  *stream,
-                            void          *buffer,
-                            gsize          count,
-                            GCancellable  *cancellable,
-                            GError       **error)
+spice_vmc_input_stream_read(GInputStream *stream,
+                            void *buffer,
+                            gsize count,
+                            GCancellable *cancellable,
+                            GError **error)
 {
     g_return_val_if_reached(-1);
 }
 
 static gssize
-spice_vmc_input_stream_skip(GInputStream  *stream,
-                            gsize          count,
-                            GCancellable  *cancellable,
-                            GError       **error)
+spice_vmc_input_stream_skip(GInputStream *stream,
+                            gsize count,
+                            GCancellable *cancellable,
+                            GError **error)
 {
     g_return_val_if_reached(-1);
 }
 
 static gboolean
-spice_vmc_input_stream_close(GInputStream  *stream,
-                             GCancellable  *cancellable,
-                             GError       **error)
+spice_vmc_input_stream_close(GInputStream *stream,
+                             GCancellable *cancellable,
+                             GError **error)
 {
     SPICE_DEBUG("fake close");
     return TRUE;
@@ -331,24 +336,23 @@ struct _SpiceVmcOutputStreamClass
     GOutputStreamClass parent_class;
 };
 
-static gssize   spice_vmc_output_stream_write_fn     (GOutputStream   *stream,
-                                                      const void      *buffer,
-                                                      gsize            count,
-                                                      GCancellable    *cancellable,
-                                                      GError         **error);
-static gssize   spice_vmc_output_stream_write_finish (GOutputStream   *stream,
-                                                      GAsyncResult    *result,
-                                                      GError         **error);
-static void     spice_vmc_output_stream_write_async  (GOutputStream   *stream,
-                                                      const void      *buffer,
-                                                      gsize            count,
-                                                      int              io_priority,
-                                                      GCancellable    *cancellable,
-                                                      GAsyncReadyCallback callback,
-                                                      gpointer         user_data);
+static gssize spice_vmc_output_stream_write_fn(GOutputStream *stream,
+                                               const void *buffer,
+                                               gsize count,
+                                               GCancellable *cancellable,
+                                               GError **error);
+static gssize spice_vmc_output_stream_write_finish(GOutputStream *stream,
+                                                   GAsyncResult *result,
+                                                   GError **error);
+static void spice_vmc_output_stream_write_async(GOutputStream *stream,
+                                                const void *buffer,
+                                                gsize count,
+                                                int io_priority,
+                                                GCancellable *cancellable,
+                                                GAsyncReadyCallback callback,
+                                                gpointer user_data);
 
 G_DEFINE_TYPE(SpiceVmcOutputStream, spice_vmc_output_stream, G_TYPE_OUTPUT_STREAM)
-
 
 static void
 spice_vmc_output_stream_class_init(SpiceVmcOutputStreamClass *klass)
@@ -378,11 +382,11 @@ spice_vmc_output_stream_new(SpiceChannel *channel)
 }
 
 static gssize
-spice_vmc_output_stream_write_fn(GOutputStream   *stream,
-                                 const void      *buffer,
-                                 gsize            count,
-                                 GCancellable    *cancellable,
-                                 GError         **error)
+spice_vmc_output_stream_write_fn(GOutputStream *stream,
+                                 const void *buffer,
+                                 gsize count,
+                                 GCancellable *cancellable,
+                                 GError **error)
 {
     SpiceVmcOutputStream *self = SPICE_VMC_OUTPUT_STREAM(stream);
     SpiceMsgOut *msg_out;
@@ -416,9 +420,12 @@ write_cb(GObject *source_object,
     SPICE_DEBUG("spicevmc write finish");
     bytes_written = spice_vmc_write_finish(SPICE_CHANNEL(source_object), res, &error);
 
-    if (error) {
+    if (error)
+    {
         g_task_return_error(task, error);
-    } else {
+    }
+    else
+    {
         g_task_return_int(task, bytes_written);
     }
     g_object_unref(task);
@@ -461,9 +468,9 @@ struct _SpiceVmcStreamClass
     GIOStreamClass parent_class;
 };
 
-static void            spice_vmc_stream_finalize          (GObject   *object);
-static GInputStream *  spice_vmc_stream_get_input_stream  (GIOStream *stream);
-static GOutputStream * spice_vmc_stream_get_output_stream (GIOStream *stream);
+static void spice_vmc_stream_finalize(GObject *object);
+static GInputStream *spice_vmc_stream_get_input_stream(GIOStream *stream);
+static GOutputStream *spice_vmc_stream_get_output_stream(GIOStream *stream);
 
 G_DEFINE_TYPE(SpiceVmcStream, spice_vmc_stream, G_TYPE_IO_STREAM)
 

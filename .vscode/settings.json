@@ -1,0 +1,10 @@
+{
+  "C_Cpp.default.compileCommands": "/Users/anmoldhiman/dev/spice-gtk/builddir/compile_commands.json",
+  "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild",
+  "files.associations": {
+    "gio-coroutine.h": "c",
+    "config.h": "c",
+    "spice-util-priv.h": "c",
+    "coroutine.h": "c"
+  }
+}

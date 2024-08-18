@@ -25,23 +25,26 @@
 #include "spice-common.h"
 #include "spice-session.h"
 #include "spice-util.h"
+#include "spice-util-priv.h"
 
-struct stream {
-    GstElement              *pipe;
-    GstElement              *src;
-    GstElement              *sink;
-    guint                   rate;
-    guint                   channels;
-    gboolean                fake; /* fake channel just for getting info about audio (volume) */
+struct stream
+{
+    GstElement *pipe;
+    GstElement *src;
+    GstElement *sink;
+    guint rate;
+    guint channels;
+    gboolean fake; /* fake channel just for getting info about audio (volume) */
 };
 
-struct _SpiceGstaudioPrivate {
-    SpiceChannel            *pchannel;
-    SpiceChannel            *rchannel;
-    struct stream           playback;
-    struct stream           record;
-    guint                   mmtime_id;
-    guint                   rbus_watch_id;
+struct _SpiceGstaudioPrivate
+{
+    SpiceChannel *pchannel;
+    SpiceChannel *rchannel;
+    struct stream playback;
+    struct stream record;
+    guint mmtime_id;
+    guint rbus_watch_id;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE(SpiceGstaudio, spice_gstaudio, SPICE_TYPE_AUDIO)
@@ -49,19 +52,20 @@ G_DEFINE_TYPE_WITH_PRIVATE(SpiceGstaudio, spice_gstaudio, SPICE_TYPE_AUDIO)
 static gboolean connect_channel(SpiceAudio *audio, SpiceChannel *channel);
 static void channel_weak_notified(gpointer data, GObject *where_the_object_was);
 static void spice_gstaudio_get_playback_volume_info_async(SpiceAudio *audio,
-        GCancellable *cancellable, SpiceMainChannel *main_channel,
-        GAsyncReadyCallback callback, gpointer user_data);
+                                                          GCancellable *cancellable, SpiceMainChannel *main_channel,
+                                                          GAsyncReadyCallback callback, gpointer user_data);
 static gboolean spice_gstaudio_get_playback_volume_info_finish(SpiceAudio *audio,
-        GAsyncResult *res, gboolean *mute, guint8 *nchannels, guint16 **volume, GError **error);
+                                                               GAsyncResult *res, gboolean *mute, guint8 *nchannels, guint16 **volume, GError **error);
 static void spice_gstaudio_get_record_volume_info_async(SpiceAudio *audio,
-        GCancellable *cancellable, SpiceMainChannel *main_channel,
-        GAsyncReadyCallback callback, gpointer user_data);
+                                                        GCancellable *cancellable, SpiceMainChannel *main_channel,
+                                                        GAsyncReadyCallback callback, gpointer user_data);
 static gboolean spice_gstaudio_get_record_volume_info_finish(SpiceAudio *audio,
-        GAsyncResult *res, gboolean *mute, guint8 *nchannels, guint16 **volume, GError **error);
+                                                             GAsyncResult *res, gboolean *mute, guint8 *nchannels, guint16 **volume, GError **error);
 
 static void stream_dispose(struct stream *s)
 {
-    if (s->pipe) {
+    if (s->pipe)
+    {
         gst_element_set_state(s->pipe, GST_STATE_NULL);
         g_clear_pointer(&s->pipe, gst_object_unref);
     }
@@ -78,8 +82,9 @@ static void spice_gstaudio_dispose(GObject *obj)
     p = gstaudio->priv;
 
     stream_dispose(&p->playback);
-    if (p->rbus_watch_id > 0) {
-        g_source_remove(p->rbus_watch_id);
+    if (p->rbus_watch_id > 0)
+    {
+        g_spice_source_remove(p->rbus_watch_id);
         p->rbus_watch_id = 0;
     }
     stream_dispose(&p->record);
@@ -124,7 +129,7 @@ static GstFlowReturn record_new_buffer(GstAppSink *appsink, gpointer data)
     g_return_val_if_fail(p != NULL, GST_FLOW_ERROR);
 
     msg = gst_message_new_application(GST_OBJECT(p->record.pipe),
-                                      gst_structure_new_empty ("new-sample"));
+                                      gst_structure_new_empty("new-sample"));
     gst_element_post_message(p->record.pipe, msg);
     return GST_FLOW_OK;
 }
@@ -145,33 +150,38 @@ static gboolean record_bus_cb(GstBus *bus, GstMessage *msg, gpointer data)
 
     g_return_val_if_fail(p != NULL, FALSE);
 
-    switch (GST_MESSAGE_TYPE(msg)) {
-    case GST_MESSAGE_APPLICATION: {
+    switch (GST_MESSAGE_TYPE(msg))
+    {
+    case GST_MESSAGE_APPLICATION:
+    {
         GstSample *s;
         GstBuffer *buffer;
         GstMapInfo mapping;
 
         s = gst_app_sink_pull_sample(GST_APP_SINK(p->record.sink));
-        if (!s) {
+        if (!s)
+        {
             if (!gst_app_sink_is_eos(GST_APP_SINK(p->record.sink)))
                 g_warning("eos not reached, but can't pull new sample");
             return TRUE;
         }
 
         buffer = gst_sample_get_buffer(s);
-        if (!buffer) {
+        if (!buffer)
+        {
             if (!gst_app_sink_is_eos(GST_APP_SINK(p->record.sink)))
                 g_warning("eos not reached, but can't pull new buffer");
             return TRUE;
         }
-        if (!gst_buffer_map(buffer, &mapping, GST_MAP_READ)) {
+        if (!gst_buffer_map(buffer, &mapping, GST_MAP_READ))
+        {
             return TRUE;
         }
 
         spice_record_channel_send_data(SPICE_RECORD_CHANNEL(p->rchannel),
-                               /* FIXME: server side doesn't care about ts?
-                                  what is the unit? ms apparently */
-                               mapping.data, mapping.size, 0);
+                                       /* FIXME: server side doesn't care about ts?
+                                          what is the unit? ms apparently */
+                                       mapping.data, mapping.size, 0);
         gst_buffer_unmap(buffer, &mapping);
         gst_sample_unref(s);
         break;
@@ -194,27 +204,33 @@ static void record_start(SpiceRecordChannel *channel, gint format, gint channels
 
     if (p->record.pipe &&
         (p->record.rate != frequency ||
-         p->record.channels != channels)) {
+         p->record.channels != channels))
+    {
         gst_element_set_state(p->record.pipe, GST_STATE_NULL);
-        if (p->rbus_watch_id > 0) {
-            g_source_remove(p->rbus_watch_id);
+        if (p->rbus_watch_id > 0)
+        {
+            g_spice_source_remove(p->rbus_watch_id);
             p->rbus_watch_id = 0;
         }
         g_clear_pointer(&p->record.pipe, gst_object_unref);
     }
 
-    if (!p->record.pipe) {
+    if (!p->record.pipe)
+    {
         GError *error = NULL;
         GstBus *bus;
         gchar *audio_caps =
             g_strdup_printf("audio/x-raw,format=\"S16LE\",channels=%d,rate=%d,"
-                            "layout=interleaved", channels, frequency);
+                            "layout=interleaved",
+                            channels, frequency);
         gchar *pipeline =
             g_strdup_printf("autoaudiosrc name=audiosrc ! queue ! audioconvert ! audioresample ! "
-                            "appsink caps=\"%s\" name=appsink", audio_caps);
+                            "appsink caps=\"%s\" name=appsink",
+                            audio_caps);
 
         p->record.pipe = gst_parse_launch(pipeline, &error);
-        if (error != NULL) {
+        if (error != NULL)
+        {
             g_warning("Failed to create pipeline: %s", error->message);
             goto cleanup;
         }
@@ -232,7 +248,7 @@ static void record_start(SpiceRecordChannel *channel, gint format, gint channels
         spice_g_signal_connect_object(p->record.sink, "new-sample",
                                       G_CALLBACK(record_new_buffer), gstaudio, 0);
 
-cleanup:
+    cleanup:
         if (error != NULL)
             g_clear_pointer(&p->record.pipe, gst_object_unref);
         g_clear_error(&error);
@@ -250,8 +266,9 @@ static void playback_stop(SpiceGstaudio *gstaudio)
 
     if (p->playback.pipe)
         gst_element_set_state(p->playback.pipe, GST_STATE_READY);
-    if (p->mmtime_id != 0) {
-        g_source_remove(p->mmtime_id);
+    if (p->mmtime_id != 0)
+    {
+        g_spice_source_remove(p->mmtime_id);
         p->mmtime_id = 0;
     }
 }
@@ -265,16 +282,16 @@ static gboolean update_mmtime_timeout_cb(gpointer data)
     g_return_val_if_fail(!p->playback.fake, TRUE);
 
     q = gst_query_new_latency();
-    if (gst_element_query(p->playback.pipe, q)) {
+    if (gst_element_query(p->playback.pipe, q))
+    {
         gboolean live;
         GstClockTime minlat, maxlat;
         gst_query_parse_latency(q, &live, &minlat, &maxlat);
-        SPICE_DEBUG("got min latency %" GST_TIME_FORMAT ", max latency %"
-                    GST_TIME_FORMAT ", live %d", GST_TIME_ARGS (minlat),
-                    GST_TIME_ARGS (maxlat), live);
+        SPICE_DEBUG("got min latency %" GST_TIME_FORMAT ", max latency %" GST_TIME_FORMAT ", live %d", GST_TIME_ARGS(minlat),
+                    GST_TIME_ARGS(maxlat), live);
         spice_playback_channel_set_delay(SPICE_PLAYBACK_CHANNEL(p->pchannel), GST_TIME_AS_MSECONDS(minlat));
     }
-    gst_query_unref (q);
+    gst_query_unref(q);
 
     return TRUE;
 }
@@ -290,23 +307,28 @@ static void playback_start(SpicePlaybackChannel *channel, gint format, gint chan
 
     if (p->playback.pipe &&
         (p->playback.rate != frequency ||
-         p->playback.channels != channels)) {
+         p->playback.channels != channels))
+    {
         playback_stop(gstaudio);
         g_clear_pointer(&p->playback.pipe, gst_object_unref);
     }
 
-    if (!p->playback.pipe) {
+    if (!p->playback.pipe)
+    {
         GError *error = NULL;
         gchar *audio_caps =
             g_strdup_printf("audio/x-raw,format=\"S16LE\",channels=%d,rate=%d,"
-                            "layout=interleaved", channels, frequency);
-        gchar *pipeline = g_strdup (g_getenv("SPICE_GST_AUDIOSINK"));
+                            "layout=interleaved",
+                            channels, frequency);
+        gchar *pipeline = g_strdup(g_getenv("SPICE_GST_AUDIOSINK"));
         if (pipeline == NULL)
             pipeline = g_strdup_printf("appsrc is-live=1 do-timestamp=0 format=time caps=\"%s\" name=\"appsrc\" ! queue ! "
-                                       "audioconvert ! audioresample ! autoaudiosink name=\"audiosink\"", audio_caps);
+                                       "audioconvert ! audioresample ! autoaudiosink name=\"audiosink\"",
+                                       audio_caps);
         SPICE_DEBUG("audio pipeline: %s", pipeline);
         p->playback.pipe = gst_parse_launch(pipeline, &error);
-        if (error != NULL) {
+        if (error != NULL)
+        {
             g_warning("Failed to create pipeline: %s", error->message);
             goto cleanup;
         }
@@ -315,7 +337,7 @@ static void playback_start(SpicePlaybackChannel *channel, gint format, gint chan
         p->playback.rate = frequency;
         p->playback.channels = channels;
 
-cleanup:
+    cleanup:
         if (error != NULL)
             g_clear_pointer(&p->playback.pipe, gst_object_unref);
         g_clear_error(&error);
@@ -326,9 +348,10 @@ cleanup:
     if (p->playback.pipe)
         gst_element_set_state(p->playback.pipe, GST_STATE_PLAYING);
 
-    if (!p->playback.fake && p->mmtime_id == 0) {
+    if (!p->playback.fake && p->mmtime_id == 0)
+    {
         update_mmtime_timeout_cb(gstaudio);
-        p->mmtime_id = g_timeout_add_seconds(1, update_mmtime_timeout_cb, gstaudio);
+        p->mmtime_id = g_spice_timeout_add_seconds(1, update_mmtime_timeout_cb, gstaudio);
     }
 }
 
@@ -369,7 +392,7 @@ static void playback_volume_changed(GObject *object, GParamSpec *pspec, gpointer
     g_return_if_fail(nchannels > 0);
 
     vol = 1.0 * volume[0] / VOLUME_NORMAL;
-    SPICE_DEBUG("playback volume changed to %u (%0.2f)", volume[0], 100*vol);
+    SPICE_DEBUG("playback volume changed to %u (%0.2f)", volume[0], 100 * vol);
 
     if (GST_IS_BIN(p->playback.sink))
         e = gst_bin_get_by_interface(GST_BIN(p->playback.sink), GST_TYPE_STREAM_VOLUME);
@@ -379,11 +402,16 @@ static void playback_volume_changed(GObject *object, GParamSpec *pspec, gpointer
     /* Double check to make compiler happy */
     g_return_if_fail(e != NULL);
 
-    if (GST_IS_STREAM_VOLUME(e)) {
+    if (GST_IS_STREAM_VOLUME(e))
+    {
         gst_stream_volume_set_volume(GST_STREAM_VOLUME(e), GST_STREAM_VOLUME_FORMAT_CUBIC, vol);
-    } else if (g_object_class_find_property(G_OBJECT_GET_CLASS (e), "volume") != NULL) {
+    }
+    else if (g_object_class_find_property(G_OBJECT_GET_CLASS(e), "volume") != NULL)
+    {
         g_object_set(e, "volume", vol, NULL);
-    } else {
+    }
+    else
+    {
         g_warning("playback: ignoring volume change on %s", gst_element_get_name(e));
     }
 
@@ -411,11 +439,16 @@ static void playback_mute_changed(GObject *object, GParamSpec *pspec, gpointer d
     /* Double check to make compiler happy */
     g_return_if_fail(e != NULL);
 
-    if (GST_IS_STREAM_VOLUME(e)) {
+    if (GST_IS_STREAM_VOLUME(e))
+    {
         gst_stream_volume_set_mute(GST_STREAM_VOLUME(e), mute);
-    } else if (g_object_class_find_property(G_OBJECT_GET_CLASS (e), "mute") != NULL) {
+    }
+    else if (g_object_class_find_property(G_OBJECT_GET_CLASS(e), "mute") != NULL)
+    {
         g_object_set(e, "mute", mute, NULL);
-    } else {
+    }
+    else
+    {
         g_warning("playback: ignoring mute change on %s", gst_element_get_name(e));
     }
 
@@ -442,7 +475,7 @@ static void record_volume_changed(GObject *object, GParamSpec *pspec, gpointer d
     g_return_if_fail(nchannels > 0);
 
     vol = 1.0 * volume[0] / VOLUME_NORMAL;
-    SPICE_DEBUG("record volume changed to %u (%0.2f)", volume[0], 100*vol);
+    SPICE_DEBUG("record volume changed to %u (%0.2f)", volume[0], 100 * vol);
 
     if (GST_IS_BIN(p->record.src))
         e = gst_bin_get_by_interface(GST_BIN(p->record.src), GST_TYPE_STREAM_VOLUME);
@@ -452,11 +485,16 @@ static void record_volume_changed(GObject *object, GParamSpec *pspec, gpointer d
     /* Double check to make compiler happy */
     g_return_if_fail(e != NULL);
 
-    if (GST_IS_STREAM_VOLUME(e)) {
+    if (GST_IS_STREAM_VOLUME(e))
+    {
         gst_stream_volume_set_volume(GST_STREAM_VOLUME(e), GST_STREAM_VOLUME_FORMAT_CUBIC, vol);
-    } else if (g_object_class_find_property(G_OBJECT_GET_CLASS (e), "volume") != NULL) {
+    }
+    else if (g_object_class_find_property(G_OBJECT_GET_CLASS(e), "volume") != NULL)
+    {
         g_object_set(e, "volume", vol, NULL);
-    } else {
+    }
+    else
+    {
         g_warning("record: ignoring volume change on %s", gst_element_get_name(e));
     }
 
@@ -484,11 +522,16 @@ static void record_mute_changed(GObject *object, GParamSpec *pspec, gpointer dat
     /* Double check to make compiler happy */
     g_return_if_fail(e != NULL);
 
-    if (GST_IS_STREAM_VOLUME (e)) {
+    if (GST_IS_STREAM_VOLUME(e))
+    {
         gst_stream_volume_set_mute(GST_STREAM_VOLUME(e), mute);
-    } else if (g_object_class_find_property(G_OBJECT_GET_CLASS (e), "mute") != NULL) {
+    }
+    else if (g_object_class_find_property(G_OBJECT_GET_CLASS(e), "mute") != NULL)
+    {
         g_object_set(e, "mute", mute, NULL);
-    } else {
+    }
+    else
+    {
         g_warning("record: ignoring mute change on %s", gst_element_get_name(e));
     }
 
@@ -502,11 +545,14 @@ channel_weak_notified(gpointer data,
     SpiceGstaudio *gstaudio = SPICE_GSTAUDIO(data);
     SpiceGstaudioPrivate *p = gstaudio->priv;
 
-    if (where_the_object_was == (GObject *)p->pchannel) {
+    if (where_the_object_was == (GObject *)p->pchannel)
+    {
         SPICE_DEBUG("playback closed");
         playback_stop(gstaudio);
         p->pchannel = NULL;
-    } else if (where_the_object_was == (GObject *)p->rchannel) {
+    }
+    else if (where_the_object_was == (GObject *)p->rchannel)
+    {
         SPICE_DEBUG("record closed");
         record_stop(gstaudio);
         p->rchannel = NULL;
@@ -518,7 +564,8 @@ static gboolean connect_channel(SpiceAudio *audio, SpiceChannel *channel)
     SpiceGstaudio *gstaudio = SPICE_GSTAUDIO(audio);
     SpiceGstaudioPrivate *p = gstaudio->priv;
 
-    if (SPICE_IS_PLAYBACK_CHANNEL(channel)) {
+    if (SPICE_IS_PLAYBACK_CHANNEL(channel))
+    {
         g_return_val_if_fail(p->pchannel == NULL, FALSE);
 
         p->pchannel = channel;
@@ -537,7 +584,8 @@ static gboolean connect_channel(SpiceAudio *audio, SpiceChannel *channel)
         return TRUE;
     }
 
-    if (SPICE_IS_RECORD_CHANNEL(channel)) {
+    if (SPICE_IS_RECORD_CHANNEL(channel))
+    {
         g_return_val_if_fail(p->rchannel == NULL, FALSE);
 
         p->rchannel = channel;
@@ -562,16 +610,19 @@ SpiceGstaudio *spice_gstaudio_new(SpiceSession *session, GMainContext *context,
 {
     GError *err = NULL;
 
-    if (gst_init_check(NULL, NULL, &err)) {
+    if (gst_init_check(NULL, NULL, &err))
+    {
         GstPluginFeature *pulsesrc;
 
         pulsesrc = gst_registry_lookup_feature(gst_registry_get(), "pulsesrc");
-        if (pulsesrc) {
+        if (pulsesrc)
+        {
             unsigned major, minor, micro;
             GstPlugin *plugin = gst_plugin_feature_get_plugin(pulsesrc);
 
             if (sscanf(gst_plugin_get_version(plugin), "%u.%u.%u",
-                       &major, &minor, &micro) != 3) {
+                       &major, &minor, &micro) != 3)
+            {
                 g_warn_if_reached();
                 gst_object_unref(plugin);
                 gst_object_unref(pulsesrc);
@@ -580,7 +631,8 @@ SpiceGstaudio *spice_gstaudio_new(SpiceSession *session, GMainContext *context,
 
             if (major < 1 ||
                 (major == 1 && minor < 14) ||
-                (major == 1 && minor == 14 && micro < 5)) {
+                (major == 1 && minor == 14 && micro < 5))
+            {
                 g_warning("Bad pulsesrc version %s, lowering its rank",
                           gst_plugin_get_version(plugin));
                 gst_plugin_feature_set_rank(pulsesrc, GST_RANK_NONE);
@@ -628,15 +680,18 @@ static gboolean spice_gstaudio_get_playback_volume_info_finish(SpiceAudio *audio
 
     g_return_val_if_fail(g_task_is_valid(task, audio), FALSE);
 
-    if (g_task_had_error(task)) {
+    if (g_task_had_error(task))
+    {
         /* set out args that should have new alloc'ed memory to NULL */
-        if (volume != NULL) {
+        if (volume != NULL)
+        {
             *volume = NULL;
         }
         return g_task_propagate_boolean(task, error);
     }
 
-    if (p->playback.sink == NULL || p->playback.channels == 0) {
+    if (p->playback.sink == NULL || p->playback.channels == 0)
+    {
         SPICE_DEBUG("PlaybackChannel not created yet, force start");
         p->playback.fake = TRUE;
         /* In order to get system volume, we start the pipeline */
@@ -648,36 +703,44 @@ static gboolean spice_gstaudio_get_playback_volume_info_finish(SpiceAudio *audio
     if (!e)
         e = g_object_ref(p->playback.sink);
 
-    if (GST_IS_STREAM_VOLUME(e)) {
+    if (GST_IS_STREAM_VOLUME(e))
+    {
         vol = gst_stream_volume_get_volume(GST_STREAM_VOLUME(e), GST_STREAM_VOLUME_FORMAT_CUBIC);
         lmute = gst_stream_volume_get_mute(GST_STREAM_VOLUME(e));
-    } else {
+    }
+    else
+    {
         g_object_get(e,
                      "volume", &vol,
                      "mute", &lmute, NULL);
     }
     g_object_unref(e);
 
-    if (p->playback.fake) {
+    if (p->playback.fake)
+    {
         SPICE_DEBUG("Stop faked PlaybackChannel");
         playback_stop(SPICE_GSTAUDIO(audio));
         p->playback.fake = FALSE;
     }
 
-    if (mute != NULL) {
+    if (mute != NULL)
+    {
         *mute = lmute;
     }
 
-    if (nchannels != NULL) {
+    if (nchannels != NULL)
+    {
         *nchannels = p->playback.channels;
     }
 
-    if (volume != NULL) {
+    if (volume != NULL)
+    {
         gint i;
         *volume = g_new(guint16, p->playback.channels);
-        for (i = 0; i < p->playback.channels; i++) {
-            (*volume)[i] = (guint16) (vol * VOLUME_NORMAL);
-            SPICE_DEBUG("(playback) volume at %d is %u (%0.2f%%)", i, (*volume)[i], 100*vol);
+        for (i = 0; i < p->playback.channels; i++)
+        {
+            (*volume)[i] = (guint16)(vol * VOLUME_NORMAL);
+            SPICE_DEBUG("(playback) volume at %d is %u (%0.2f%%)", i, (*volume)[i], 100 * vol);
         }
     }
 
@@ -712,15 +775,18 @@ static gboolean spice_gstaudio_get_record_volume_info_finish(SpiceAudio *audio,
 
     g_return_val_if_fail(g_task_is_valid(task, audio), FALSE);
 
-    if (g_task_had_error(task)) {
+    if (g_task_had_error(task))
+    {
         /* set out args that should have new alloc'ed memory to NULL */
-        if (volume != NULL) {
+        if (volume != NULL)
+        {
             *volume = NULL;
         }
         return g_task_propagate_boolean(task, error);
     }
 
-    if (p->record.src == NULL || p->record.channels == 0) {
+    if (p->record.src == NULL || p->record.channels == 0)
+    {
         SPICE_DEBUG("RecordChannel not created yet, force start");
         /* In order to get system volume, we start the pipeline */
         record_start(NULL, SPICE_AUDIO_FMT_S16, 2, 48000, audio);
@@ -732,35 +798,43 @@ static gboolean spice_gstaudio_get_record_volume_info_finish(SpiceAudio *audio,
     if (!e)
         e = g_object_ref(p->record.src);
 
-    if (GST_IS_STREAM_VOLUME(e)) {
+    if (GST_IS_STREAM_VOLUME(e))
+    {
         vol = gst_stream_volume_get_volume(GST_STREAM_VOLUME(e), GST_STREAM_VOLUME_FORMAT_CUBIC);
         lmute = gst_stream_volume_get_mute(GST_STREAM_VOLUME(e));
-    } else {
+    }
+    else
+    {
         g_object_get(e,
                      "volume", &vol,
                      "mute", &lmute, NULL);
     }
     g_object_unref(e);
 
-    if (fake_channel) {
+    if (fake_channel)
+    {
         SPICE_DEBUG("Stop faked RecordChannel");
         record_stop(SPICE_GSTAUDIO(audio));
     }
 
-    if (mute != NULL) {
+    if (mute != NULL)
+    {
         *mute = lmute;
     }
 
-    if (nchannels != NULL) {
+    if (nchannels != NULL)
+    {
         *nchannels = p->record.channels;
     }
 
-    if (volume != NULL) {
+    if (volume != NULL)
+    {
         gint i;
         *volume = g_new(guint16, p->record.channels);
-        for (i = 0; i < p->record.channels; i++) {
-            (*volume)[i] = (guint16) (vol * VOLUME_NORMAL);
-            SPICE_DEBUG("(record) volume at %d is %u (%0.2f%%)", i, (*volume)[i], 100*vol);
+        for (i = 0; i < p->record.channels; i++)
+        {
+            (*volume)[i] = (guint16)(vol * VOLUME_NORMAL);
+            SPICE_DEBUG("(record) volume at %d is %u (%0.2f%%)", i, (*volume)[i], 100 * vol);
         }
     }
 

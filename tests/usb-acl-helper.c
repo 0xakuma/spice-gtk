@@ -19,7 +19,8 @@
 #include <glib.h>
 #include "usb-acl-helper.h"
 
-typedef struct {
+typedef struct
+{
     SpiceUsbAclHelper *acl_helper;
     GCancellable *cancellable;
     GMainLoop *loop;
@@ -43,24 +44,23 @@ static gboolean cancel_test(gpointer user_data)
 
 static void data_setup(Fixture *fixture, gconstpointer user_data G_GNUC_UNUSED)
 {
-    g_setenv("SPICE_USB_ACL_BINARY", TESTDIR"/test-mock-acl-helper", TRUE);
+    g_setenv("SPICE_USB_ACL_BINARY", TESTDIR "/test-mock-acl-helper", TRUE);
     fixture->cancellable = g_cancellable_new();
     fixture->acl_helper = spice_usb_acl_helper_new();
     fixture->loop = g_main_loop_new(NULL, FALSE);
     /* abort test after 2 seconds if it hasn't yet completed */
-    fixture->timeout_source = g_timeout_add_seconds(2, abort_test, fixture);
+    fixture->timeout_source = g_spice_timeout_add_seconds(2, abort_test, fixture);
 }
 
 static void data_teardown(Fixture *fixture, gconstpointer user_data G_GNUC_UNUSED)
 {
     if (fixture->timeout_source)
-        g_source_remove(fixture->timeout_source);
+        g_spice_source_remove(fixture->timeout_source);
     g_object_unref(fixture->cancellable);
     g_object_unref(fixture->acl_helper);
     g_main_loop_unref(fixture->loop);
     g_unsetenv("SPICE_USB_ACL_BINARY");
 }
-
 
 static void success_cb(GObject *source, GAsyncResult *result, gpointer user_data)
 {
@@ -84,7 +84,7 @@ static void spawn_fail_cb(GObject *source, GAsyncResult *result, gpointer user_d
     GError *error = NULL;
     gboolean success = spice_usb_acl_helper_open_acl_finish(SPICE_USB_ACL_HELPER(source), result, &error);
     g_assert(!success);
-    g_assert (error->domain == G_SPAWN_ERROR);
+    g_assert(error->domain == G_SPAWN_ERROR);
     g_clear_error(&error);
     g_main_loop_quit(f->loop);
 }
@@ -181,7 +181,7 @@ static void test_acl_helper_client_canceled(Fixture *fixture, gconstpointer user
     g_setenv("TEST_NORESPONSE", "1", TRUE);
     spice_usb_acl_helper_open_acl_async(fixture->acl_helper, 1, 1,
                                         fixture->cancellable, client_canceled_cb, fixture);
-    g_idle_add(cancel_test, fixture);
+    g_spice_idle_add(cancel_test, fixture);
     g_main_loop_run(fixture->loop);
     g_unsetenv("TEST_NORESPONSE");
 }
@@ -197,12 +197,13 @@ static void test_acl_helper_no_response(Fixture *fixture, gconstpointer user_dat
     g_unsetenv("TEST_NORESPONSE");
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     /* Meson waits for stderr to be not readable so make sure the
      * helper does not keep the pipe open (this happens with current
      * mock helper) */
-    if (freopen("usb-acl-helper-error.log", "w", stderr) == NULL) {
+    if (freopen("usb-acl-helper-error.log", "w", stderr) == NULL)
+    {
         return 1;
     }
 
@@ -229,6 +230,5 @@ int main(int argc, char* argv[])
      * - read_line from helper binary returns something other than G_IO_STATUS_NORMAL
      */
 
-    return g_test_run ();
+    return g_test_run();
 }
-

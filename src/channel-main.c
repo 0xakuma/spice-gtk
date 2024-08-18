@@ -30,6 +30,7 @@
 #include "spice-session-priv.h"
 #include "spice-audio-priv.h"
 #include "spice-file-transfer-task-priv.h"
+#include "spice-util-priv.h"
 
 /**
  * SECTION:channel-main
@@ -51,75 +52,81 @@
 
 typedef struct spice_migrate spice_migrate;
 
-typedef enum {
+typedef enum
+{
     DISPLAY_UNDEFINED,
     DISPLAY_DISABLED,
     DISPLAY_ENABLED,
 } SpiceDisplayState;
 
-typedef struct {
-    int                     x;
-    int                     y;
-    int                     width;
-    int                     height;
-    int                     width_mm;
-    int                     height_mm;
-    SpiceDisplayState       display_state;
+typedef struct
+{
+    int x;
+    int y;
+    int width;
+    int height;
+    int width_mm;
+    int height_mm;
+    SpiceDisplayState display_state;
 } SpiceDisplayConfig;
 
-typedef struct {
-    GHashTable                 *xfer_task;
-    SpiceMainChannel           *channel;
-    GFileProgressCallback       progress_callback;
-    gpointer                    progress_callback_data;
-    GTask                      *task;
-    struct {
-        goffset                 total_sent;
-        goffset                 transfer_size;
-        guint                   num_files;
-        guint                   succeed;
-        guint                   cancelled;
-        guint                   failed;
+typedef struct
+{
+    GHashTable *xfer_task;
+    SpiceMainChannel *channel;
+    GFileProgressCallback progress_callback;
+    gpointer progress_callback_data;
+    GTask *task;
+    struct
+    {
+        goffset total_sent;
+        goffset transfer_size;
+        guint num_files;
+        guint succeed;
+        guint cancelled;
+        guint failed;
     } stats;
 } FileTransferOperation;
 
-struct _SpiceMainChannelPrivate  {
-    enum SpiceMouseMode         mouse_mode;
-    enum SpiceMouseMode         requested_mouse_mode;
-    bool                        agent_connected;
-    bool                        agent_caps_received;
+struct _SpiceMainChannelPrivate
+{
+    enum SpiceMouseMode mouse_mode;
+    enum SpiceMouseMode requested_mouse_mode;
+    bool agent_connected;
+    bool agent_caps_received;
 
-    gboolean                    agent_display_config_sent;
-    gboolean                    display_disable_wallpaper:1;
-    gboolean                    display_disable_font_smooth:1;
-    gboolean                    display_disable_animation:1;
-    gboolean                    disable_display_position:1;
-    gboolean                    disable_display_align:1;
+    gboolean agent_display_config_sent;
+    gboolean display_disable_wallpaper : 1;
+    gboolean display_disable_font_smooth : 1;
+    gboolean display_disable_animation : 1;
+    gboolean disable_display_position : 1;
+    gboolean disable_display_align : 1;
 
-    int                         agent_tokens;
-    VDAgentMessage              agent_msg; /* partial msg reconstruction */
-    guint8                      *agent_msg_data;
-    guint                       agent_msg_pos;
-    uint8_t                     agent_msg_size;
-    uint32_t                    agent_caps[VD_AGENT_CAPS_SIZE];
-    SpiceDisplayConfig          display[MAX_DISPLAY];
-    gint                        timer_id;
-    GQueue                      *agent_msg_queue;
-    GHashTable                  *file_xfer_tasks;
-    GHashTable                  *flushing;
+    int agent_tokens;
+    VDAgentMessage agent_msg; /* partial msg reconstruction */
+    guint8 *agent_msg_data;
+    guint agent_msg_pos;
+    uint8_t agent_msg_size;
+    uint32_t agent_caps[VD_AGENT_CAPS_SIZE];
+    SpiceDisplayConfig display[MAX_DISPLAY];
+    gint timer_id;
+    GQueue *agent_msg_queue;
+    GHashTable *file_xfer_tasks;
+    GHashTable *flushing;
 
-    guint                       switch_host_delayed_id;
-    guint                       migrate_delayed_id;
-    spice_migrate               *migrate_data;
-    int                         max_clipboard;
-    uint32_t                    clipboard_serial[G_MAXUINT8+1];
+    guint switch_host_delayed_id;
+    guint migrate_delayed_id;
+    spice_migrate *migrate_data;
+    int max_clipboard;
+    uint32_t clipboard_serial[G_MAXUINT8 + 1];
 
-    gboolean                    agent_volume_playback_sync;
-    gboolean                    agent_volume_record_sync;
-    GCancellable                *cancellable_volume_info;
+    gboolean agent_volume_playback_sync;
+    gboolean agent_volume_record_sync;
+    GCancellable *cancellable_volume_info;
 };
 
-struct spice_migrate {
+struct spice_migrate
+{
     struct coroutine *from;
     SpiceMigrationDstInfo info;
     SpiceSession *session;
@@ -138,7 +145,8 @@ struct spice_migrate {
 G_DEFINE_TYPE_WITH_PRIVATE(SpiceMainChannel, spice_main_channel, SPICE_TYPE_CHANNEL)
 
 /* Properties */
-enum {
+enum
+{
     PROP_0,
     PROP_MOUSE_MODE,
     PROP_AGENT_CONNECTED,
@@ -153,7 +161,8 @@ enum {
 };
 
 /* Signals */
-enum {
+enum
+{
     SPICE_MAIN_MOUSE_UPDATE,
     SPICE_MAIN_AGENT_UPDATE,
     SPICE_MAIN_CLIPBOARD,
@@ -199,37 +208,37 @@ static void spice_migrate_unref(spice_migrate *mig);
 /* ------------------------------------------------------------------ */
 
 static const char *agent_msg_types[] = {
-    [ VD_AGENT_MOUSE_STATE             ] = "mouse state",
-    [ VD_AGENT_MONITORS_CONFIG         ] = "monitors config",
-    [ VD_AGENT_REPLY                   ] = "reply",
-    [ VD_AGENT_CLIPBOARD               ] = "clipboard",
-    [ VD_AGENT_DISPLAY_CONFIG          ] = "display config",
-    [ VD_AGENT_ANNOUNCE_CAPABILITIES   ] = "announce caps",
-    [ VD_AGENT_CLIPBOARD_GRAB          ] = "clipboard grab",
-    [ VD_AGENT_CLIPBOARD_REQUEST       ] = "clipboard request",
-    [ VD_AGENT_CLIPBOARD_RELEASE       ] = "clipboard release",
-    [ VD_AGENT_AUDIO_VOLUME_SYNC       ] = "volume-sync",
+    [VD_AGENT_MOUSE_STATE] = "mouse state",
+    [VD_AGENT_MONITORS_CONFIG] = "monitors config",
+    [VD_AGENT_REPLY] = "reply",
+    [VD_AGENT_CLIPBOARD] = "clipboard",
+    [VD_AGENT_DISPLAY_CONFIG] = "display config",
+    [VD_AGENT_ANNOUNCE_CAPABILITIES] = "announce caps",
+    [VD_AGENT_CLIPBOARD_GRAB] = "clipboard grab",
+    [VD_AGENT_CLIPBOARD_REQUEST] = "clipboard request",
+    [VD_AGENT_CLIPBOARD_RELEASE] = "clipboard release",
+    [VD_AGENT_AUDIO_VOLUME_SYNC] = "volume-sync",
 };
 
 static const char *agent_caps[] = {
-    [ VD_AGENT_CAP_MOUSE_STATE         ] = "mouse state",
-    [ VD_AGENT_CAP_MONITORS_CONFIG     ] = "monitors config",
-    [ VD_AGENT_CAP_REPLY               ] = "reply",
-    [ VD_AGENT_CAP_CLIPBOARD           ] = "clipboard (old)",
-    [ VD_AGENT_CAP_DISPLAY_CONFIG      ] = "display config",
-    [ VD_AGENT_CAP_CLIPBOARD_BY_DEMAND ] = "clipboard",
-    [ VD_AGENT_CAP_CLIPBOARD_SELECTION ] = "clipboard selection",
-    [ VD_AGENT_CAP_SPARSE_MONITORS_CONFIG ] = "sparse monitors",
-    [ VD_AGENT_CAP_GUEST_LINEEND_LF    ] = "line-end lf",
-    [ VD_AGENT_CAP_GUEST_LINEEND_CRLF  ] = "line-end crlf",
-    [ VD_AGENT_CAP_MAX_CLIPBOARD       ] = "max-clipboard",
-    [ VD_AGENT_CAP_AUDIO_VOLUME_SYNC   ] = "volume-sync",
-    [ VD_AGENT_CAP_MONITORS_CONFIG_POSITION ] = "monitors config position",
-    [ VD_AGENT_CAP_FILE_XFER_DISABLED ] = "file transfer disabled",
-    [ VD_AGENT_CAP_FILE_XFER_DETAILED_ERRORS ] = "file transfer detailed errors",
-    [ VD_AGENT_CAP_GRAPHICS_DEVICE_INFO ] = "graphics device info",
-    [ VD_AGENT_CAP_CLIPBOARD_NO_RELEASE_ON_REGRAB ] = "no release on re-grab",
-    [ VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL ] = "clipboard grab serial",
+    [VD_AGENT_CAP_MOUSE_STATE] = "mouse state",
+    [VD_AGENT_CAP_MONITORS_CONFIG] = "monitors config",
+    [VD_AGENT_CAP_REPLY] = "reply",
+    [VD_AGENT_CAP_CLIPBOARD] = "clipboard (old)",
+    [VD_AGENT_CAP_DISPLAY_CONFIG] = "display config",
+    [VD_AGENT_CAP_CLIPBOARD_BY_DEMAND] = "clipboard",
+    [VD_AGENT_CAP_CLIPBOARD_SELECTION] = "clipboard selection",
+    [VD_AGENT_CAP_SPARSE_MONITORS_CONFIG] = "sparse monitors",
+    [VD_AGENT_CAP_GUEST_LINEEND_LF] = "line-end lf",
+    [VD_AGENT_CAP_GUEST_LINEEND_CRLF] = "line-end crlf",
+    [VD_AGENT_CAP_MAX_CLIPBOARD] = "max-clipboard",
+    [VD_AGENT_CAP_AUDIO_VOLUME_SYNC] = "volume-sync",
+    [VD_AGENT_CAP_MONITORS_CONFIG_POSITION] = "monitors config position",
+    [VD_AGENT_CAP_FILE_XFER_DISABLED] = "file transfer disabled",
+    [VD_AGENT_CAP_FILE_XFER_DETAILED_ERRORS] = "file transfer detailed errors",
+    [VD_AGENT_CAP_GRAPHICS_DEVICE_INFO] = "graphics device info",
+    [VD_AGENT_CAP_CLIPBOARD_NO_RELEASE_ON_REGRAB] = "no release on re-grab",
+    [VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL] = "clipboard grab serial",
 };
 #define NAME(_a, _i) ((_i) < SPICE_N_ELEMENTS(_a) && _a[_i] != NULL ? _a[_i] : "?")
 
@@ -277,15 +286,16 @@ static gint spice_main_get_max_clipboard(SpiceMainChannel *self)
     return self->priv->max_clipboard;
 }
 
-static void spice_main_get_property(GObject    *object,
-                                    guint       prop_id,
-                                    GValue     *value,
+static void spice_main_get_property(GObject *object,
+                                    guint prop_id,
+                                    GValue *value,
                                     GParamSpec *pspec)
 {
     SpiceMainChannel *self = SPICE_MAIN_CHANNEL(object);
     SpiceMainChannelPrivate *c = self->priv;
 
-    switch (prop_id) {
+    switch (prop_id)
+    {
     case PROP_MOUSE_MODE:
         g_value_set_int(value, c->mouse_mode);
         break;
@@ -328,7 +338,8 @@ static void spice_main_set_property(GObject *gobject, guint prop_id,
     SpiceMainChannel *self = SPICE_MAIN_CHANNEL(gobject);
     SpiceMainChannelPrivate *c = self->priv;
 
-    switch (prop_id) {
+    switch (prop_id)
+    {
     case PROP_DISPLAY_DISABLE_WALLPAPER:
         c->display_disable_wallpaper = g_value_get_boolean(value);
         break;
@@ -360,23 +371,26 @@ static void spice_main_channel_dispose(GObject *obj)
 {
     SpiceMainChannelPrivate *c = SPICE_MAIN_CHANNEL(obj)->priv;
 
-    if (c->timer_id) {
-        g_source_remove(c->timer_id);
+    if (c->timer_id)
+    {
+        g_spice_source_remove(c->timer_id);
         c->timer_id = 0;
     }
 
-    if (c->switch_host_delayed_id) {
-        g_source_remove(c->switch_host_delayed_id);
+    if (c->switch_host_delayed_id)
+    {
+        g_spice_source_remove(c->switch_host_delayed_id);
         c->switch_host_delayed_id = 0;
     }
 
-    if (c->migrate_delayed_id) {
-        g_source_remove(c->migrate_delayed_id);
+    if (c->migrate_delayed_id)
+    {
+        g_spice_source_remove(c->migrate_delayed_id);
         c->migrate_delayed_id = 0;
     }
 
     g_clear_pointer(&c->file_xfer_tasks, g_hash_table_unref);
-    g_clear_pointer (&c->flushing, g_hash_table_unref);
+    g_clear_pointer(&c->flushing, g_hash_table_unref);
 
     g_cancellable_cancel(c->cancellable_volume_info);
     g_clear_object(&c->cancellable_volume_info);
@@ -461,13 +475,13 @@ static void spice_main_channel_class_init(SpiceMainChannelClass *klass)
     GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
     SpiceChannelClass *channel_class = SPICE_CHANNEL_CLASS(klass);
 
-    gobject_class->dispose      = spice_main_channel_dispose;
-    gobject_class->finalize     = spice_main_channel_finalize;
+    gobject_class->dispose = spice_main_channel_dispose;
+    gobject_class->finalize = spice_main_channel_finalize;
     gobject_class->get_property = spice_main_get_property;
     gobject_class->set_property = spice_main_set_property;
-    gobject_class->constructed  = spice_main_constructed;
+    gobject_class->constructed = spice_main_constructed;
 
-    channel_class->handle_msg    = spice_main_handle_msg;
+    channel_class->handle_msg = spice_main_handle_msg;
     channel_class->iterate_write = spice_channel_iterate_write;
     channel_class->channel_reset = spice_main_channel_reset;
     channel_class->channel_send_migration_handshake = spice_main_channel_send_migration_handshake;
@@ -483,78 +497,71 @@ static void spice_main_channel_class_init(SpiceMainChannelClass *klass)
      * client sends relative mouse movements and the server sends
      * position and shape commands.
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_MOUSE_MODE,
-         g_param_spec_int("mouse-mode",
-                          "Mouse mode",
-                          "Mouse mode",
-                          0, INT_MAX, 0,
-                          G_PARAM_READABLE |
-                          G_PARAM_STATIC_NAME |
-                          G_PARAM_STATIC_NICK |
-                          G_PARAM_STATIC_BLURB));
+    g_object_class_install_property(gobject_class, PROP_MOUSE_MODE,
+                                    g_param_spec_int("mouse-mode",
+                                                     "Mouse mode",
+                                                     "Mouse mode",
+                                                     0, INT_MAX, 0,
+                                                     G_PARAM_READABLE |
+                                                         G_PARAM_STATIC_NAME |
+                                                         G_PARAM_STATIC_NICK |
+                                                         G_PARAM_STATIC_BLURB));
 
-    g_object_class_install_property
-        (gobject_class, PROP_AGENT_CONNECTED,
-         g_param_spec_boolean("agent-connected",
-                              "Agent connected",
-                              "Whether the agent is connected",
-                              FALSE,
-                              G_PARAM_READABLE |
-                              G_PARAM_STATIC_NAME |
-                              G_PARAM_STATIC_NICK |
-                              G_PARAM_STATIC_BLURB));
+    g_object_class_install_property(gobject_class, PROP_AGENT_CONNECTED,
+                                    g_param_spec_boolean("agent-connected",
+                                                         "Agent connected",
+                                                         "Whether the agent is connected",
+                                                         FALSE,
+                                                         G_PARAM_READABLE |
+                                                             G_PARAM_STATIC_NAME |
+                                                             G_PARAM_STATIC_NICK |
+                                                             G_PARAM_STATIC_BLURB));
 
-    g_object_class_install_property
-        (gobject_class, PROP_AGENT_CAPS_0,
-         g_param_spec_int("agent-caps-0",
-                          "Agent caps 0",
-                          "Agent capability bits 0 -> 31",
-                          0, INT_MAX, 0,
-                          G_PARAM_READABLE |
-                          G_PARAM_STATIC_NAME |
-                          G_PARAM_STATIC_NICK |
-                          G_PARAM_STATIC_BLURB));
+    g_object_class_install_property(gobject_class, PROP_AGENT_CAPS_0,
+                                    g_param_spec_int("agent-caps-0",
+                                                     "Agent caps 0",
+                                                     "Agent capability bits 0 -> 31",
+                                                     0, INT_MAX, 0,
+                                                     G_PARAM_READABLE |
+                                                         G_PARAM_STATIC_NAME |
+                                                         G_PARAM_STATIC_NICK |
+                                                         G_PARAM_STATIC_BLURB));
 
-    g_object_class_install_property
-        (gobject_class, PROP_DISPLAY_DISABLE_WALLPAPER,
-         g_param_spec_boolean("disable-wallpaper",
-                              "Disable guest wallpaper",
-                              "Disable guest wallpaper",
-                              FALSE,
-                              G_PARAM_READWRITE |
-                              G_PARAM_CONSTRUCT |
-                              G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_DISPLAY_DISABLE_WALLPAPER,
+                                    g_param_spec_boolean("disable-wallpaper",
+                                                         "Disable guest wallpaper",
+                                                         "Disable guest wallpaper",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE |
+                                                             G_PARAM_CONSTRUCT |
+                                                             G_PARAM_STATIC_STRINGS));
 
-    g_object_class_install_property
-        (gobject_class, PROP_DISPLAY_DISABLE_FONT_SMOOTH,
-         g_param_spec_boolean("disable-font-smooth",
-                              "Disable guest font smooth",
-                              "Disable guest font smoothing",
-                              FALSE,
-                              G_PARAM_READWRITE |
-                              G_PARAM_CONSTRUCT |
-                              G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_DISPLAY_DISABLE_FONT_SMOOTH,
+                                    g_param_spec_boolean("disable-font-smooth",
+                                                         "Disable guest font smooth",
+                                                         "Disable guest font smoothing",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE |
+                                                             G_PARAM_CONSTRUCT |
+                                                             G_PARAM_STATIC_STRINGS));
 
-    g_object_class_install_property
-        (gobject_class, PROP_DISPLAY_DISABLE_ANIMATION,
-         g_param_spec_boolean("disable-animation",
-                              "Disable guest animations",
-                              "Disable guest animations",
-                              FALSE,
-                              G_PARAM_READWRITE |
-                              G_PARAM_CONSTRUCT |
-                              G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_DISPLAY_DISABLE_ANIMATION,
+                                    g_param_spec_boolean("disable-animation",
+                                                         "Disable guest animations",
+                                                         "Disable guest animations",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE |
+                                                             G_PARAM_CONSTRUCT |
+                                                             G_PARAM_STATIC_STRINGS));
 
-    g_object_class_install_property
-        (gobject_class, PROP_DISABLE_DISPLAY_POSITION,
-         g_param_spec_boolean("disable-display-position",
-                              "Disable display position",
-                              "Disable using display position when setting monitor config",
-                              TRUE,
-                              G_PARAM_READWRITE |
-                              G_PARAM_CONSTRUCT |
-                              G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_DISABLE_DISPLAY_POSITION,
+                                    g_param_spec_boolean("disable-display-position",
+                                                         "Disable display position",
+                                                         "Disable using display position when setting monitor config",
+                                                         TRUE,
+                                                         G_PARAM_READWRITE |
+                                                             G_PARAM_CONSTRUCT |
+                                                             G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceMainChannel:color-depth:
@@ -563,15 +570,14 @@ static void spice_main_channel_class_init(SpiceMainChannelClass *klass)
      * This option is currently ignored.
      *
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_DISPLAY_COLOR_DEPTH,
-         g_param_spec_uint("color-depth",
-                           "Color depth",
-                           "Color depth", 0, 32, 0,
-                           G_PARAM_DEPRECATED |
-                           G_PARAM_READWRITE |
-                           G_PARAM_CONSTRUCT |
-                           G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_DISPLAY_COLOR_DEPTH,
+                                    g_param_spec_uint("color-depth",
+                                                      "Color depth",
+                                                      "Color depth", 0, 32, 0,
+                                                      G_PARAM_DEPRECATED |
+                                                          G_PARAM_READWRITE |
+                                                          G_PARAM_CONSTRUCT |
+                                                          G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceMainChannel:disable-display-align:
@@ -580,15 +586,14 @@ static void spice_main_channel_class_init(SpiceMainChannelClass *klass)
      *
      * Since: 0.13
      */
-    g_object_class_install_property
-        (gobject_class, PROP_DISABLE_DISPLAY_ALIGN,
-         g_param_spec_boolean("disable-display-align",
-                              "Disable display align",
-                              "Disable display position alignment",
-                              FALSE,
-                              G_PARAM_READWRITE |
-                              G_PARAM_CONSTRUCT |
-                              G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_DISABLE_DISPLAY_ALIGN,
+                                    g_param_spec_boolean("disable-display-align",
+                                                         "Disable display align",
+                                                         "Disable display position alignment",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE |
+                                                             G_PARAM_CONSTRUCT |
+                                                             G_PARAM_STATIC_STRINGS));
 
     /**
      * SpiceMainChannel:max-clipboard:
@@ -598,15 +603,14 @@ static void spice_main_channel_class_init(SpiceMainChannelClass *klass)
      *
      * Since: 0.22
      **/
-    g_object_class_install_property
-        (gobject_class, PROP_MAX_CLIPBOARD,
-         g_param_spec_int("max-clipboard",
-                          "max clipboard",
-                          "Maximum clipboard data size",
-                          -1, G_MAXINT, 100 * 1024 * 1024,
-                          G_PARAM_READWRITE |
-                          G_PARAM_CONSTRUCT |
-                          G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(gobject_class, PROP_MAX_CLIPBOARD,
+                                    g_param_spec_int("max-clipboard",
+                                                     "max clipboard",
+                                                     "Maximum clipboard data size",
+                                                     -1, G_MAXINT, 100 * 1024 * 1024,
+                                                     G_PARAM_READWRITE |
+                                                         G_PARAM_CONSTRUCT |
+                                                         G_PARAM_STATIC_STRINGS));
 
     /* TODO use notify instead */
     /**
@@ -866,7 +870,6 @@ static void spice_main_channel_class_init(SpiceMainChannelClass *klass)
 
 /* ------------------------------------------------------------------ */
 
-
 static void agent_free_msg_queue(SpiceMainChannel *channel)
 {
     SpiceMainChannelPrivate *c = channel->priv;
@@ -875,7 +878,8 @@ static void agent_free_msg_queue(SpiceMainChannel *channel)
     if (!c->agent_msg_queue)
         return;
 
-    while (!g_queue_is_empty(c->agent_msg_queue)) {
+    while (!g_queue_is_empty(c->agent_msg_queue))
+    {
         out = g_queue_pop_head(c->agent_msg_queue);
         spice_msg_out_unref(out);
     }
@@ -917,7 +921,8 @@ static void file_xfer_flush_async(SpiceFileTransferTask *xfer_task,
 
     c = channel->priv;
     was_empty = g_queue_is_empty(c->agent_msg_queue);
-    if (was_empty) {
+    if (was_empty)
+    {
         g_task_return_boolean(task, TRUE);
         g_object_unref(task);
         return;
@@ -945,14 +950,16 @@ static void agent_send_msg_queue(SpiceMainChannel *channel)
     SpiceMsgOut *out;
 
     while (c->agent_tokens > 0 &&
-           !g_queue_is_empty(c->agent_msg_queue)) {
+           !g_queue_is_empty(c->agent_msg_queue))
+    {
         GTask *task;
         c->agent_tokens--;
         out = g_queue_pop_head(c->agent_msg_queue);
         spice_msg_out_send_internal(out);
 
         task = g_hash_table_lookup(c->flushing, out);
-        if (task) {
+        if (task)
+        {
             /* if there's a flush task waiting for this message, finish it */
             g_hash_table_remove(c->flushing, out);
             g_task_return_boolean(task, TRUE);
@@ -960,7 +967,8 @@ static void agent_send_msg_queue(SpiceMainChannel *channel)
         }
     }
     if (g_queue_is_empty(c->agent_msg_queue) &&
-        g_hash_table_size(c->flushing) != 0) {
+        g_hash_table_size(c->flushing) != 0)
+    {
         g_warning("unexpected flush task in list, clearing");
         file_xfer_flushed(channel, TRUE);
     }
@@ -988,7 +996,8 @@ static void agent_msg_queue_many(SpiceMainChannel *channel, int type, const void
     G_STATIC_ASSERT(VD_AGENT_MAX_DATA_SIZE > sizeof(VDAgentMessage));
 
     va_start(args, data);
-    for (d = data; d != NULL; d = va_arg(args, void*)) {
+    for (d = data; d != NULL; d = va_arg(args, void *))
+    {
         size += va_arg(args, gsize);
     }
     va_end(args);
@@ -1004,16 +1013,20 @@ static void agent_msg_queue_many(SpiceMainChannel *channel, int type, const void
     memcpy(payload, &msg, sizeof(VDAgentMessage));
     payload += sizeof(VDAgentMessage);
     paysize -= sizeof(VDAgentMessage);
-    if (paysize == 0) {
+    if (paysize == 0)
+    {
         g_queue_push_tail(c->agent_msg_queue, out);
         out = NULL;
     }
 
     va_start(args, data);
-    for (d = data; size > 0; d = va_arg(args, void*)) {
+    for (d = data; size > 0; d = va_arg(args, void *))
+    {
         s = va_arg(args, gsize);
-        while (s > 0) {
-            if (out == NULL) {
+        while (s > 0)
+        {
+            if (out == NULL)
+            {
                 paysize = MIN(VD_AGENT_MAX_DATA_SIZE, size);
                 out = spice_msg_out_new(SPICE_CHANNEL(channel), SPICE_MSGC_MAIN_AGENT_DATA);
                 payload = spice_marshaller_reserve_space(out->marshaller, paysize);
@@ -1025,7 +1038,8 @@ static void agent_msg_queue_many(SpiceMainChannel *channel, int type, const void
             s -= mins;
             size -= mins;
             paysize -= mins;
-            if (paysize == 0) {
+            if (paysize == 0)
+            {
                 g_queue_push_tail(c->agent_msg_queue, out);
                 out = NULL;
             }
@@ -1043,7 +1057,7 @@ static int monitors_cmp(const void *p1, const void *p2, gpointer user_data)
     double d2 = sqrt(m2->x * m2->x + m2->y * m2->y);
     int diff = d1 - d2;
 
-    return diff == 0 ? (char*)p1 - (char*)p2 : diff;
+    return diff == 0 ? (char *)p1 - (char *)p2 : diff;
 }
 
 static void monitors_align(VDAgentMonConfig *monitors, int nmonitors)
@@ -1060,9 +1074,11 @@ static void monitors_align(VDAgentMonConfig *monitors, int nmonitors)
     g_qsort_with_data(sorted_monitors, nmonitors, sizeof(VDAgentMonConfig), monitors_cmp, NULL);
 
     /* super-KISS ltr alignment, feel free to improve */
-    for (i = 0; i < nmonitors; i++) {
+    for (i = 0; i < nmonitors; i++)
+    {
         /* Find where this monitor is in the sorted order */
-        for (j = 0; j < nmonitors; j++) {
+        for (j = 0; j < nmonitors; j++)
+        {
             /* Avoid using the same entry twice, this happens with older
                virt-viewer versions which always set x and y to 0 */
             if (used & (1 << j))
@@ -1081,7 +1097,6 @@ static void monitors_align(VDAgentMonConfig *monitors, int nmonitors)
     }
     g_free(sorted_monitors);
 }
-
 
 #define agent_msg_queue(Channel, Type, Size, Data) \
     agent_msg_queue_many((Channel), (Type), (Data), (gsize)(Size), NULL)
@@ -1124,18 +1139,22 @@ gboolean spice_main_channel_send_monitor_config(SpiceMainChannel *channel)
     c = channel->priv;
     g_return_val_if_fail(c->agent_connected, FALSE);
 
-    if (spice_main_channel_agent_test_capability(channel, VD_AGENT_CAP_SPARSE_MONITORS_CONFIG)) {
+    if (spice_main_channel_agent_test_capability(channel, VD_AGENT_CAP_SPARSE_MONITORS_CONFIG))
+    {
         monitors = SPICE_N_ELEMENTS(c->display);
-    } else {
+    }
+    else
+    {
         monitors = 0;
-        for (i = 0; i < SPICE_N_ELEMENTS(c->display); i++) {
+        for (i = 0; i < SPICE_N_ELEMENTS(c->display); i++)
+        {
             if (c->display[i].display_state == DISPLAY_ENABLED)
                 monitors += 1;
         }
     }
 
     size = sizeof(VDAgentMonitorsConfig) +
-        (sizeof(VDAgentMonConfig) + sizeof(VDAgentMonitorMM)) * monitors;
+           (sizeof(VDAgentMonConfig) + sizeof(VDAgentMonitorMM)) * monitors;
     mon = g_malloc0(size);
 
     mon->num_of_monitors = monitors;
@@ -1147,15 +1166,17 @@ gboolean spice_main_channel_send_monitor_config(SpiceMainChannel *channel)
 
     CHANNEL_DEBUG(channel, "sending new monitors config to guest");
     j = 0;
-    for (i = 0; i < SPICE_N_ELEMENTS(c->display); i++) {
-        if (c->display[i].display_state != DISPLAY_ENABLED) {
+    for (i = 0; i < SPICE_N_ELEMENTS(c->display); i++)
+    {
+        if (c->display[i].display_state != DISPLAY_ENABLED)
+        {
             if (spice_main_channel_agent_test_capability(channel,
                                                          VD_AGENT_CAP_SPARSE_MONITORS_CONFIG))
                 j++;
             continue;
         }
-        mon->monitors[j].depth  = 32;
-        mon->monitors[j].width  = c->display[i].width;
+        mon->monitors[j].depth = 32;
+        mon->monitors[j].width = c->display[i].width;
         mon->monitors[j].height = c->display[i].height;
         mon->monitors[j].x = c->display[i].x;
         mon->monitors[j].y = c->display[i].y;
@@ -1167,10 +1188,13 @@ gboolean spice_main_channel_send_monitor_config(SpiceMainChannel *channel)
     }
 
     VDAgentMonitorMM *mm = (void *)&mon->monitors[monitors];
-    for (i = 0, j = 0; i < SPICE_N_ELEMENTS(c->display); i++) {
-        if (c->display[i].display_state != DISPLAY_ENABLED) {
+    for (i = 0, j = 0; i < SPICE_N_ELEMENTS(c->display); i++)
+    {
+        if (c->display[i].display_state != DISPLAY_ENABLED)
+        {
             if (spice_main_channel_agent_test_capability(channel,
-                                                         VD_AGENT_CAP_SPARSE_MONITORS_CONFIG)) {
+                                                         VD_AGENT_CAP_SPARSE_MONITORS_CONFIG))
+            {
                 j++;
             }
             continue;
@@ -1187,8 +1211,9 @@ gboolean spice_main_channel_send_monitor_config(SpiceMainChannel *channel)
     g_free(mon);
 
     spice_channel_wakeup(SPICE_CHANNEL(channel), FALSE);
-    if (c->timer_id != 0) {
-        g_source_remove(c->timer_id);
+    if (c->timer_id != 0)
+    {
+        g_spice_source_remove(c->timer_id);
         c->timer_id = 0;
     }
 
@@ -1213,11 +1238,15 @@ static void audio_playback_volume_info_cb(GObject *object, GAsyncResult *res, gp
 
     ret = spice_audio_get_playback_volume_info_finish(audio, res, &mute, &nchannels,
                                                       &volume, &error);
-    if (ret == FALSE || volume == NULL || nchannels == 0) {
-        if (error != NULL) {
+    if (ret == FALSE || volume == NULL || nchannels == 0)
+    {
+        if (error != NULL)
+        {
             SPICE_DEBUG("Failed to get playback async volume info: %s", error->message);
             g_error_free(error);
-        } else {
+        }
+        else
+        {
             SPICE_DEBUG("Failed to get playback async volume info");
         }
         main_channel->priv->agent_volume_playback_sync = FALSE;
@@ -1236,7 +1265,7 @@ static void audio_playback_volume_info_cb(GObject *object, GAsyncResult *res, gp
     g_free(volume);
     agent_msg_queue(main_channel, VD_AGENT_AUDIO_VOLUME_SYNC,
                     sizeof(VDAgentAudioVolumeSync) + array_size, avs);
-    g_free (avs);
+    g_free(avs);
 }
 
 static void agent_sync_audio_playback(SpiceMainChannel *main_channel)
@@ -1246,7 +1275,8 @@ static void agent_sync_audio_playback(SpiceMainChannel *main_channel)
 
     if (audio == NULL ||
         !test_agent_cap(main_channel, VD_AGENT_CAP_AUDIO_VOLUME_SYNC) ||
-        c->agent_volume_playback_sync == TRUE) {
+        c->agent_volume_playback_sync == TRUE)
+    {
         SPICE_DEBUG("%s - is not going to sync audio with guest", __func__);
         return;
     }
@@ -1269,11 +1299,15 @@ static void audio_record_volume_info_cb(GObject *object, GAsyncResult *res, gpoi
     GError *error = NULL;
 
     ret = spice_audio_get_record_volume_info_finish(audio, res, &mute, &nchannels, &volume, &error);
-    if (ret == FALSE || volume == NULL || nchannels == 0) {
-        if (error != NULL) {
+    if (ret == FALSE || volume == NULL || nchannels == 0)
+    {
+        if (error != NULL)
+        {
             SPICE_DEBUG("Failed to get record async volume info: %s", error->message);
             g_error_free(error);
-        } else {
+        }
+        else
+        {
             SPICE_DEBUG("Failed to get record async volume info");
         }
         main_channel->priv->agent_volume_record_sync = FALSE;
@@ -1292,7 +1326,7 @@ static void audio_record_volume_info_cb(GObject *object, GAsyncResult *res, gpoi
     g_free(volume);
     agent_msg_queue(main_channel, VD_AGENT_AUDIO_VOLUME_SYNC,
                     sizeof(VDAgentAudioVolumeSync) + array_size, avs);
-    g_free (avs);
+    g_free(avs);
 }
 
 static void agent_sync_audio_record(SpiceMainChannel *main_channel)
@@ -1302,7 +1336,8 @@ static void agent_sync_audio_record(SpiceMainChannel *main_channel)
 
     if (audio == NULL ||
         !test_agent_cap(main_channel, VD_AGENT_CAP_AUDIO_VOLUME_SYNC) ||
-        c->agent_volume_record_sync == TRUE) {
+        c->agent_volume_record_sync == TRUE)
+    {
         SPICE_DEBUG("%s - is not going to sync audio with guest", __func__);
         return;
     }
@@ -1318,17 +1353,22 @@ static void agent_sync_audio_record(SpiceMainChannel *main_channel)
 static void agent_display_config(SpiceMainChannel *channel)
 {
     SpiceMainChannelPrivate *c = channel->priv;
-    VDAgentDisplayConfig config = { 0, };
+    VDAgentDisplayConfig config = {
+        0,
+    };
 
-    if (c->display_disable_wallpaper) {
+    if (c->display_disable_wallpaper)
+    {
         config.flags |= VD_AGENT_DISPLAY_CONFIG_FLAG_DISABLE_WALLPAPER;
     }
 
-    if (c->display_disable_font_smooth) {
+    if (c->display_disable_font_smooth)
+    {
         config.flags |= VD_AGENT_DISPLAY_CONFIG_FLAG_DISABLE_FONT_SMOOTH;
     }
 
-    if (c->display_disable_animation) {
+    if (c->display_disable_animation)
+    {
         config.flags |= VD_AGENT_DISPLAY_CONFIG_FLAG_DISABLE_ANIMATION;
     }
 
@@ -1385,14 +1425,18 @@ static void agent_clipboard_grab(SpiceMainChannel *channel, guint selection,
     g_return_if_fail(test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_BY_DEMAND));
 
     size = sizeof(VDAgentClipboardGrab) + sizeof(uint32_t) * ntypes;
-    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
+    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_SELECTION))
+    {
         size += 4;
-    } else if (selection != VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD) {
+    }
+    else if (selection != VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD)
+    {
         CHANNEL_DEBUG(channel, "Ignoring clipboard grab");
         return;
     }
 
-    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL)) {
+    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL))
+    {
         size += sizeof(uint32_t);
     }
 
@@ -1401,18 +1445,21 @@ static void agent_clipboard_grab(SpiceMainChannel *channel, guint selection,
 
     grab = (VDAgentClipboardGrab *)msg;
 
-    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
+    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_SELECTION))
+    {
         *(uint8_t *)grab = selection;
         grab = (void *)grab + sizeof(uint32_t);
     }
 
-    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL)) {
+    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL))
+    {
         uint32_t serial = c->clipboard_serial[selection]++;
         *(uint32_t *)grab = GUINT32_TO_LE(serial);
         grab = (void *)grab + sizeof(uint32_t);
     }
 
-    for (i = 0; i < ntypes; i++) {
+    for (i = 0; i < ntypes; i++)
+    {
         grab->types[i] = types[i];
     }
 
@@ -1435,9 +1482,12 @@ static void agent_clipboard_notify(SpiceMainChannel *self, guint selection,
     g_return_if_fail(max_clipboard == -1 || size < max_clipboard);
 
     msgsize = sizeof(VDAgentClipboard);
-    if (test_agent_cap(self, VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
+    if (test_agent_cap(self, VD_AGENT_CAP_CLIPBOARD_SELECTION))
+    {
         msgsize += 4;
-    } else if (selection != VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD) {
+    }
+    else if (selection != VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD)
+    {
         CHANNEL_DEBUG(self, "Ignoring clipboard notify");
         return;
     }
@@ -1447,7 +1497,8 @@ static void agent_clipboard_notify(SpiceMainChannel *self, guint selection,
 
     cb = (VDAgentClipboard *)msg;
 
-    if (test_agent_cap(self, VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
+    if (test_agent_cap(self, VD_AGENT_CAP_CLIPBOARD_SELECTION))
+    {
         msg[0] = selection;
         cb = (VDAgentClipboard *)(msg + 4);
     }
@@ -1469,9 +1520,12 @@ static void agent_clipboard_request(SpiceMainChannel *channel, guint selection, 
     g_return_if_fail(test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_BY_DEMAND));
 
     msgsize = sizeof(VDAgentClipboardRequest);
-    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
+    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_SELECTION))
+    {
         msgsize += 4;
-    } else if (selection != VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD) {
+    }
+    else if (selection != VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD)
+    {
         SPICE_DEBUG("Ignoring clipboard request");
         return;
     }
@@ -1481,7 +1535,8 @@ static void agent_clipboard_request(SpiceMainChannel *channel, guint selection, 
 
     request = (VDAgentClipboardRequest *)msg;
 
-    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
+    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_SELECTION))
+    {
         msg[0] = selection;
         request = (VDAgentClipboardRequest *)(msg + 4);
     }
@@ -1496,16 +1551,21 @@ static void agent_clipboard_request(SpiceMainChannel *channel, guint selection, 
 static void agent_clipboard_release(SpiceMainChannel *channel, guint selection)
 {
     SpiceMainChannelPrivate *c = channel->priv;
-    guint8 msg[4] = { 0, };
+    guint8 msg[4] = {
+        0,
+    };
     guint8 msgsize = 0;
 
     g_return_if_fail(c->agent_connected);
     g_return_if_fail(test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_BY_DEMAND));
 
-    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
+    if (test_agent_cap(channel, VD_AGENT_CAP_CLIPBOARD_SELECTION))
+    {
         msg[0] = selection;
         msgsize += 4;
-    } else if (selection != VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD) {
+    }
+    else if (selection != VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD)
+    {
         SPICE_DEBUG("Ignoring clipboard release");
         return;
     }
@@ -1521,7 +1581,8 @@ static gboolean any_display_has_dimensions(SpiceMainChannel *channel)
     g_return_val_if_fail(SPICE_IS_MAIN_CHANNEL(channel), FALSE);
     c = channel->priv;
 
-    for (i = 0; i < MAX_DISPLAY; i++) {
+    for (i = 0; i < MAX_DISPLAY; i++)
+    {
         if (c->display[i].width > 0 && c->display[i].height > 0)
             return TRUE;
     }
@@ -1541,18 +1602,21 @@ static gboolean timer_set_display(gpointer data)
     if (!c->agent_connected)
         return FALSE;
 
-    if (!any_display_has_dimensions(channel)) {
+    if (!any_display_has_dimensions(channel))
+    {
         SPICE_DEBUG("Not sending monitors config, at least one monitor must have dimensions");
         return FALSE;
     }
 
     session = spice_channel_get_session(SPICE_CHANNEL(channel));
 
-    if (!spice_main_channel_agent_test_capability(channel, VD_AGENT_CAP_SPARSE_MONITORS_CONFIG)) {
+    if (!spice_main_channel_agent_test_capability(channel, VD_AGENT_CAP_SPARSE_MONITORS_CONFIG))
+    {
         /* ensure we have an explicit monitor configuration at least for
            number of display channels */
         for (i = 0; i < spice_session_get_n_display_channels(session); i++)
-            if (c->display[i].display_state == DISPLAY_UNDEFINED) {
+            if (c->display[i].display_state == DISPLAY_UNDEFINED)
+            {
                 SPICE_DEBUG("Not sending monitors config, missing monitors");
                 return FALSE;
             }
@@ -1568,18 +1632,20 @@ static void update_display_timer(SpiceMainChannel *channel, guint seconds)
     SpiceMainChannelPrivate *c = channel->priv;
 
     if (c->timer_id)
-        g_source_remove(c->timer_id);
+        g_spice_source_remove(c->timer_id);
 
-    if (seconds != 0) {
-        c->timer_id = g_timeout_add_seconds(seconds, timer_set_display, channel);
-    } else {
+    if (seconds != 0)
+    {
+        c->timer_id = g_spice_timeout_add_seconds(seconds, timer_set_display, channel);
+    }
+    else
+    {
         /* We need to special case 0, as we want the callback to fire as soon
-         * as possible. g_timeout_add_seconds(0) would set up a timer which would fire
+         * as possible. g_spice_timeout_add_seconds(0) would set up a timer which would fire
          * at the next second boundary, which might be nearly 1 full second later.
          */
-        c->timer_id = g_timeout_add(0, timer_set_display, channel);
+        c->timer_id = g_spice_timeout_add(0, timer_set_display, channel);
     }
-
 }
 
 /* coroutine context  */
@@ -1588,7 +1654,8 @@ static void set_agent_connected(SpiceMainChannel *channel, gboolean connected)
     SpiceMainChannelPrivate *c = channel->priv;
 
     SPICE_DEBUG("agent connected: %s", spice_yes_no(connected));
-    if (connected != c->agent_connected) {
+    if (connected != c->agent_connected)
+    {
         c->agent_connected = connected;
         g_coroutine_object_notify(G_OBJECT(channel), "agent-connected");
     }
@@ -1616,7 +1683,8 @@ static void agent_start(SpiceMainChannel *channel)
     out->marshallers->msgc_main_agent_start(out->marshaller, &agent_start);
     spice_msg_out_send_internal(out);
 
-    if (c->agent_connected) {
+    if (c->agent_connected)
+    {
         agent_announce_caps(channel);
         agent_send_msg_queue(channel);
     }
@@ -1683,14 +1751,16 @@ static void set_mouse_mode(SpiceMainChannel *channel, uint32_t supported, uint32
 {
     SpiceMainChannelPrivate *c = channel->priv;
 
-    if (c->mouse_mode != current) {
+    if (c->mouse_mode != current)
+    {
         c->mouse_mode = current;
         g_coroutine_signal_emit(channel, signals[SPICE_MAIN_MOUSE_UPDATE], 0);
         g_coroutine_object_notify(G_OBJECT(channel), "mouse-mode");
     }
 
     if (c->requested_mouse_mode != c->mouse_mode &&
-        c->requested_mouse_mode & supported) {
+        c->requested_mouse_mode & supported)
+    {
         spice_main_channel_request_mouse_mode(SPICE_MAIN_CHANNEL(channel), c->requested_mouse_mode);
     }
 }
@@ -1756,7 +1826,8 @@ static void main_handle_mm_time(SpiceChannel *channel, SpiceMsgIn *in)
     spice_session_set_mm_time(session, msg->time);
 }
 
-typedef struct channel_new {
+typedef struct channel_new
+{
     SpiceSession *session;
     int type;
     int id;
@@ -1788,7 +1859,8 @@ static void main_handle_channels_list(SpiceChannel *channel, SpiceMsgIn *in)
      * the server is older and doesn't actually send the uuid */
     g_coroutine_object_notify(G_OBJECT(session), "uuid");
 
-    for (i = 0; i < msg->num_of_channels; i++) {
+    for (i = 0; i < msg->num_of_channels; i++)
+    {
         channel_new_t *c;
 
         c = g_new(channel_new_t, 1);
@@ -1798,7 +1870,7 @@ static void main_handle_channels_list(SpiceChannel *channel, SpiceMsgIn *in)
         /* no need to explicitly switch to main context, since
            synchronous call is not needed. */
         /* no need to track idle, session is refed */
-        g_idle_add((GSourceFunc)_channel_new, c);
+        g_spice_idle_add((GSourceFunc)_channel_new, c);
     }
 }
 
@@ -1839,13 +1911,15 @@ static void file_xfer_data_flushed_cb(GObject *source_object,
     GError *error = NULL;
 
     file_xfer_flush_finish(xfer_task, res, &error);
-    if (error) {
+    if (error)
+    {
         spice_file_transfer_task_completed(xfer_task, error);
         return;
     }
 
     /* task might be completed while on idle */
-    if (!spice_file_transfer_task_is_completed(xfer_task)) {
+    if (!spice_file_transfer_task_is_completed(xfer_task))
+    {
         file_transfer_operation_send_progress(xfer_task);
         /* Read more data */
         spice_file_transfer_task_read_async(xfer_task, file_xfer_read_async_cb, user_data);
@@ -1865,7 +1939,7 @@ static void file_xfer_queue_msg_to_agent(SpiceMainChannel *channel,
     msg.size = data_size;
     agent_msg_queue_many(channel, VD_AGENT_FILE_XFER_DATA,
                          &msg, sizeof(msg),
-                         buffer, (gsize) data_size, NULL);
+                         buffer, (gsize)data_size, NULL);
     spice_channel_wakeup(SPICE_CHANNEL(channel), FALSE);
 }
 
@@ -1886,13 +1960,15 @@ static void file_xfer_read_async_cb(GObject *source_object,
 
     channel = spice_file_transfer_task_get_channel(xfer_task);
     count = spice_file_transfer_task_read_finish(xfer_task, res, &buffer, &error);
-    if (count < 0) {
+    if (count < 0)
+    {
         spice_channel_wakeup(SPICE_CHANNEL(channel), FALSE);
         spice_file_transfer_task_completed(xfer_task, error);
         return;
     }
 
-    if (count == 0 && spice_file_transfer_task_get_total_bytes(xfer_task) > 0) {
+    if (count == 0 && spice_file_transfer_task_get_total_bytes(xfer_task) > 0)
+    {
         /* If we have sent all payload to the agent, we should not send 0 bytes
          * as it will cause https://bugs.freedesktop.org/show_bug.cgi?id=97227.
          * Only when file has 0 bytes of size is when we should send 0 bytes to
@@ -1901,7 +1977,8 @@ static void file_xfer_read_async_cb(GObject *source_object,
     }
 
     file_xfer_queue_msg_to_agent(channel, spice_file_transfer_task_get_id(xfer_task), buffer, count);
-    if (count == 0 || spice_file_transfer_task_is_completed(xfer_task)) {
+    if (count == 0 || spice_file_transfer_task_is_completed(xfer_task))
+    {
         /* on EOF just wait for VD_AGENT_FILE_XFER_STATUS from agent
          * in case the task was completed, nothing to do. */
         return;
@@ -1927,7 +2004,8 @@ static void main_agent_handle_xfer_status(SpiceMainChannel *channel,
     g_return_if_fail(xfer_task != NULL);
     xfer_op = g_hash_table_lookup(channel->priv->file_xfer_tasks, GUINT_TO_POINTER(msg->id));
 
-    switch (msg->result) {
+    switch (msg->result)
+    {
     case VD_AGENT_FILE_XFER_STATUS_CAN_SEND_DATA:
         g_return_if_fail(spice_file_transfer_task_is_completed(xfer_task) == FALSE);
         spice_file_transfer_task_read_async(xfer_task, file_xfer_read_async_cb, xfer_op);
@@ -1936,34 +2014,40 @@ static void main_agent_handle_xfer_status(SpiceMainChannel *channel,
         error = g_error_new_literal(SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
                                     _("The spice agent cancelled the file transfer"));
         break;
-    case VD_AGENT_FILE_XFER_STATUS_ERROR: {
-        const VDAgentFileXferStatusError *err = (VDAgentFileXferStatusError *) msg->data;
+    case VD_AGENT_FILE_XFER_STATUS_ERROR:
+    {
+        const VDAgentFileXferStatusError *err = (VDAgentFileXferStatusError *)msg->data;
         if (test_agent_cap(channel, VD_AGENT_CAP_FILE_XFER_DETAILED_ERRORS) &&
             msg_hdr->size >= sizeof(*msg) + sizeof(*err) &&
-            err->error_type == VD_AGENT_FILE_XFER_STATUS_ERROR_GLIB_IO) {
+            err->error_type == VD_AGENT_FILE_XFER_STATUS_ERROR_GLIB_IO)
+        {
 
-            switch (err->error_code) {
+            switch (err->error_code)
+            {
             case G_IO_ERROR_INVALID_FILENAME:
                 error = g_error_new_literal(G_IO_ERROR, err->error_code,
                                             _("Invalid filename of transferred file"));
                 break;
-            /* Note that if the switch doesn't handle some code, "error" is
-             * left NULL so it will be treated as default error and
-             * assigned a generic message. This is a wanted behaviour. */
+                /* Note that if the switch doesn't handle some code, "error" is
+                 * left NULL so it will be treated as default error and
+                 * assigned a generic message. This is a wanted behaviour. */
             }
         }
-        if (error == NULL) {
+        if (error == NULL)
+        {
             error = g_error_new_literal(SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
                                         _("The spice agent reported an error "
                                           "during the file transfer"));
         }
         break;
     }
-    case VD_AGENT_FILE_XFER_STATUS_NOT_ENOUGH_SPACE: {
+    case VD_AGENT_FILE_XFER_STATUS_NOT_ENOUGH_SPACE:
+    {
         const VDAgentFileXferStatusNotEnoughSpace *err =
-            (VDAgentFileXferStatusNotEnoughSpace*) msg->data;
+            (VDAgentFileXferStatusNotEnoughSpace *)msg->data;
         if (!test_agent_cap(channel, VD_AGENT_CAP_FILE_XFER_DETAILED_ERRORS) ||
-            msg_hdr->size < sizeof(*msg) + sizeof(*err)) {
+            msg_hdr->size < sizeof(*msg) + sizeof(*err))
+        {
             error =
                 g_error_new(SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
                             _("File transfer failed due to lack of free space on remote machine"));
@@ -1974,7 +2058,8 @@ static void main_agent_handle_xfer_status(SpiceMainChannel *channel,
         gchar *file_size_str = g_format_size(spice_file_transfer_task_get_total_bytes(xfer_task));
         error = g_error_new(SPICE_CLIENT_ERROR, SPICE_CLIENT_ERROR_FAILED,
                             _("File transfer failed due to lack of free space on remote machine "
-                            "(%s free, %s to transfer)"), free_space_str, file_size_str);
+                              "(%s free, %s to transfer)"),
+                            free_space_str, file_size_str);
         g_free(free_space_str);
         g_free(file_size_str);
         break;
@@ -2004,12 +2089,11 @@ static void main_agent_handle_xfer_status(SpiceMainChannel *channel,
     spice_file_transfer_task_completed(xfer_task, error);
 }
 
-
 /* any context: the message is not flushed immediately,
    you can wakeup() the channel coroutine or send_msg_queue() */
 static void agent_max_clipboard(SpiceMainChannel *self)
 {
-    VDAgentMaxClipboard msg = { .max = spice_main_get_max_clipboard(self) };
+    VDAgentMaxClipboard msg = {.max = spice_main_get_max_clipboard(self)};
 
     if (!test_agent_cap(self, VD_AGENT_CAP_MAX_CLIPBOARD))
         return;
@@ -2044,14 +2128,16 @@ static void main_agent_handle_msg(SpiceChannel *channel,
 
     g_return_if_fail(msg->protocol == VD_AGENT_PROTOCOL);
 
-    switch (msg->type) {
+    switch (msg->type)
+    {
     case VD_AGENT_CLIPBOARD_RELEASE:
     case VD_AGENT_CLIPBOARD_REQUEST:
     case VD_AGENT_CLIPBOARD_GRAB:
     case VD_AGENT_CLIPBOARD:
-        if (test_agent_cap(self, VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
-            selection = *((guint8*)payload);
-            payload = ((guint8*)payload) + 4;
+        if (test_agent_cap(self, VD_AGENT_CAP_CLIPBOARD_SELECTION))
+        {
+            selection = *((guint8 *)payload);
+            payload = ((guint8 *)payload) + 4;
             msg->size -= 4;
         }
         break;
@@ -2059,7 +2145,8 @@ static void main_agent_handle_msg(SpiceChannel *channel,
         break;
     }
 
-    switch (msg->type) {
+    switch (msg->type)
+    {
     case VD_AGENT_ANNOUNCE_CAPABILITIES:
     {
         VDAgentAnnounceCapabilities *caps = payload;
@@ -2069,7 +2156,8 @@ static void main_agent_handle_msg(SpiceChannel *channel,
         if (size > VD_AGENT_CAPS_SIZE)
             size = VD_AGENT_CAPS_SIZE;
         memset(c->agent_caps, 0, sizeof(c->agent_caps));
-        for (i = 0; i < size * 32; i++) {
+        for (i = 0; i < size * 32; i++)
+        {
             if (!VD_AGENT_HAS_CAPABILITY(caps->caps, size, i))
                 continue;
             SPICE_DEBUG("%s: cap: %d (%s)", __FUNCTION__,
@@ -2084,7 +2172,8 @@ static void main_agent_handle_msg(SpiceChannel *channel,
             agent_announce_caps(self);
 
         if (test_agent_cap(self, VD_AGENT_CAP_DISPLAY_CONFIG) &&
-            !c->agent_display_config_sent) {
+            !c->agent_display_config_sent)
+        {
             agent_display_config(self);
             c->agent_display_config_sent = true;
         }
@@ -2104,7 +2193,8 @@ static void main_agent_handle_msg(SpiceChannel *channel,
         g_coroutine_signal_emit(self, signals[SPICE_MAIN_CLIPBOARD_SELECTION], 0, selection,
                                 cb->type, cb->data, msg->size - sizeof(VDAgentClipboard));
 
-        if (selection == VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD) {
+        if (selection == VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD)
+        {
             g_coroutine_signal_emit(self, signals[SPICE_MAIN_CLIPBOARD], 0,
                                     cb->type, cb->data, msg->size - sizeof(VDAgentClipboard));
         }
@@ -2114,14 +2204,18 @@ static void main_agent_handle_msg(SpiceChannel *channel,
     {
         gboolean ret;
 
-        if (test_agent_cap(self, VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL)) {
+        if (test_agent_cap(self, VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL))
+        {
             serial = GUINT32_FROM_LE(*((guint32 *)payload));
             payload = ((guint8 *)payload) + sizeof(uint32_t);
             msg->size -= sizeof(uint32_t);
 
-            if (serial == c->clipboard_serial[selection]) {
+            if (serial == c->clipboard_serial[selection])
+            {
                 c->clipboard_serial[selection]++;
-            } else {
+            }
+            else
+            {
                 CHANNEL_DEBUG(channel, "grab discard, serial:%u != c->serial:%u",
                               serial, c->clipboard_serial[selection]);
                 break;
@@ -2129,8 +2223,9 @@ static void main_agent_handle_msg(SpiceChannel *channel,
         }
 
         g_coroutine_signal_emit(self, signals[SPICE_MAIN_CLIPBOARD_SELECTION_GRAB], 0, selection,
-                                (guint8*)payload, msg->size / sizeof(uint32_t), &ret);
-        if (selection == VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD) {
+                                (guint8 *)payload, msg->size / sizeof(uint32_t), &ret);
+        if (selection == VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD)
+        {
             g_coroutine_signal_emit(self, signals[SPICE_MAIN_CLIPBOARD_GRAB], 0,
                                     payload, msg->size / sizeof(uint32_t), &ret);
         }
@@ -2173,18 +2268,20 @@ static void main_agent_handle_msg(SpiceChannel *channel,
 }
 
 /* coroutine context */
-static void main_handle_agent_data_msg(SpiceChannel* channel, int* msg_size, guchar** msg_pos)
+static void main_handle_agent_data_msg(SpiceChannel *channel, int *msg_size, guchar **msg_pos)
 {
     SpiceMainChannelPrivate *c = SPICE_MAIN_CHANNEL(channel)->priv;
     int n;
 
-    if (c->agent_msg_pos < sizeof(VDAgentMessage)) {
+    if (c->agent_msg_pos < sizeof(VDAgentMessage))
+    {
         n = MIN(sizeof(VDAgentMessage) - c->agent_msg_pos, *msg_size);
-        memcpy((uint8_t*)&c->agent_msg + c->agent_msg_pos, *msg_pos, n);
+        memcpy((uint8_t *)&c->agent_msg + c->agent_msg_pos, *msg_pos, n);
         c->agent_msg_pos += n;
         *msg_size -= n;
         *msg_pos += n;
-        if (c->agent_msg_pos == sizeof(VDAgentMessage)) {
+        if (c->agent_msg_pos == sizeof(VDAgentMessage))
+        {
             SPICE_DEBUG("agent msg start: msg_size=%u, protocol=%u, type=%u",
                         c->agent_msg.size, c->agent_msg.protocol, c->agent_msg.type);
             g_return_if_fail(c->agent_msg_data == NULL);
@@ -2192,7 +2289,8 @@ static void main_handle_agent_data_msg(SpiceChannel* channel, int* msg_size, guc
         }
     }
 
-    if (c->agent_msg_pos >= sizeof(VDAgentMessage)) {
+    if (c->agent_msg_pos >= sizeof(VDAgentMessage))
+    {
         n = MIN(sizeof(VDAgentMessage) + c->agent_msg.size - c->agent_msg_pos, *msg_size);
         memcpy(c->agent_msg_data + c->agent_msg_pos - sizeof(VDAgentMessage), *msg_pos, n);
         c->agent_msg_pos += n;
@@ -2200,7 +2298,8 @@ static void main_handle_agent_data_msg(SpiceChannel* channel, int* msg_size, guc
         *msg_pos += n;
     }
 
-    if (c->agent_msg_pos == sizeof(VDAgentMessage) + c->agent_msg.size) {
+    if (c->agent_msg_pos == sizeof(VDAgentMessage) + c->agent_msg.size)
+    {
         main_agent_handle_msg(channel, &c->agent_msg, c->agent_msg_data);
         g_free(c->agent_msg_data);
         c->agent_msg_data = NULL;
@@ -2218,21 +2317,24 @@ static void main_handle_agent_data(SpiceChannel *channel, SpiceMsgIn *in)
     g_warn_if_fail(c->agent_connected);
 
     /* shortcut to avoid extra message allocation & copy if possible */
-    if (c->agent_msg_pos == 0) {
+    if (c->agent_msg_pos == 0)
+    {
         VDAgentMessage *msg;
         guint msg_size;
 
         msg = spice_msg_in_raw(in, &len);
         msg_size = msg->size;
 
-        if (msg_size + sizeof(VDAgentMessage) == len) {
+        if (msg_size + sizeof(VDAgentMessage) == len)
+        {
             main_agent_handle_msg(channel, msg, msg->data);
             return;
         }
     }
 
     data = spice_msg_in_raw(in, &len);
-    while (len > 0) {
+    while (len > 0)
+    {
         main_handle_agent_data_msg(channel, &len, &data);
     }
 }
@@ -2248,10 +2350,11 @@ static void main_handle_agent_token(SpiceChannel *channel, SpiceMsgIn *in)
     agent_send_msg_queue(SPICE_MAIN_CHANNEL(channel));
 }
 
-static spice_migrate*
+static spice_migrate *
 spice_migrate_ref(spice_migrate *mig)
 {
-    if (mig != NULL) {
+    if (mig != NULL)
+    {
         mig->ref_count++;
     }
     return mig;
@@ -2260,7 +2363,8 @@ spice_migrate_ref(spice_migrate *mig)
 static void
 spice_migrate_unref(spice_migrate *mig)
 {
-    if (mig != NULL && --mig->ref_count == 0) {
+    if (mig != NULL && --mig->ref_count == 0)
+    {
         g_free(mig->info.host_data);
         g_free(mig->info.cert_subject_data);
         g_free(mig);
@@ -2270,8 +2374,8 @@ spice_migrate_unref(spice_migrate *mig)
 static inline void
 spice_migrate_idle_add(gboolean (*func)(spice_migrate *mig), spice_migrate *mig)
 {
-    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, (GSourceFunc) func, spice_migrate_ref(mig),
-                    (GDestroyNotify) spice_migrate_unref);
+    g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, (GSourceFunc)func, spice_migrate_ref(mig),
+                    (GDestroyNotify)spice_migrate_unref);
 }
 
 static void
@@ -2285,8 +2389,8 @@ spice_migrate_signal_connect(gpointer instance, const gchar *detailed_signal,
                              GCallback func, spice_migrate *mig)
 {
     return g_signal_connect_data(instance, detailed_signal, func, spice_migrate_ref(mig),
-                                 (GClosureNotify) spice_migrate_closure_unref,
-                                 (GConnectFlags) 0);
+                                 (GClosureNotify)spice_migrate_closure_unref,
+                                 (GConnectFlags)0);
 }
 
 /* main context */
@@ -2302,7 +2406,8 @@ migrate_channel_connect(spice_migrate *mig, int type, int id)
     SPICE_DEBUG("migrate_channel_connect %d:%d", type, id);
 
     SpiceChannel *newc = spice_channel_new(mig->session, type, id);
-    if (newc != NULL && spice_channel_connect(newc)) {
+    if (newc != NULL && spice_channel_connect(newc))
+    {
         mig->nchannels++;
     }
 }
@@ -2312,10 +2417,13 @@ static void spice_main_channel_send_migration_handshake(SpiceChannel *channel)
 {
     SpiceMainChannelPrivate *c = SPICE_MAIN_CHANNEL(channel)->priv;
 
-    if (!spice_channel_test_capability(channel, SPICE_MAIN_CAP_SEAMLESS_MIGRATE)) {
+    if (!spice_channel_test_capability(channel, SPICE_MAIN_CAP_SEAMLESS_MIGRATE))
+    {
         c->migrate_data->do_seamless = false;
         spice_migrate_idle_add(main_migrate_handshake_done, c->migrate_data);
-    } else {
+    }
+    else
+    {
         SpiceMsgcMainMigrateDstDoSeamless msg_data;
         SpiceMsgOut *msg_out;
 
@@ -2331,38 +2439,46 @@ static void spice_main_channel_send_migration_handshake(SpiceChannel *channel)
 static void migrate_channel_event_cb(SpiceChannel *channel, SpiceChannelEvent event,
                                      spice_migrate *mig)
 {
-    SpiceChannelPrivate  *c = SPICE_CHANNEL(channel)->priv;
+    SpiceChannelPrivate *c = SPICE_CHANNEL(channel)->priv;
 
     g_return_if_fail(mig->nchannels > 0);
     g_signal_handlers_disconnect_by_func(channel, migrate_channel_event_cb, mig);
 
-    switch (event) {
+    switch (event)
+    {
     case SPICE_CHANNEL_OPENED:
-        if (c->channel_type == SPICE_CHANNEL_MAIN) {
+        if (c->channel_type == SPICE_CHANNEL_MAIN)
+        {
             SpiceSession *session = spice_channel_get_session(mig->src_channel);
-            if (mig->do_seamless) {
+            if (mig->do_seamless)
+            {
                 SpiceMainChannelPrivate *main_priv = SPICE_MAIN_CHANNEL(channel)->priv;
 
                 c->state = SPICE_CHANNEL_STATE_MIGRATION_HANDSHAKE;
                 mig->dst_channel = channel;
                 spice_migrate_unref(main_priv->migrate_data);
                 main_priv->migrate_data = spice_migrate_ref(mig);
-            } else {
+            }
+            else
+            {
                 c->state = SPICE_CHANNEL_STATE_MIGRATING;
                 mig->nchannels--;
             }
             /* now connect the rest of the channels */
             GList *channels, *l;
             l = channels = spice_session_get_channels(session);
-            while (l != NULL) {
-                SpiceChannelPrivate  *curc = SPICE_CHANNEL(l->data)->priv;
+            while (l != NULL)
+            {
+                SpiceChannelPrivate *curc = SPICE_CHANNEL(l->data)->priv;
                 l = l->next;
                 if (curc->channel_type == SPICE_CHANNEL_MAIN)
                     continue;
                 migrate_channel_connect(mig, curc->channel_type, curc->channel_id);
             }
             g_list_free(channels);
-        } else {
+        }
+        else
+        {
             c->state = SPICE_CHANNEL_STATE_MIGRATING;
             mig->nchannels--;
         }
@@ -2381,7 +2497,7 @@ static void migrate_channel_event_cb(SpiceChannel *channel, SpiceChannelEvent ev
 /* main context */
 static gboolean main_migrate_handshake_done(spice_migrate *mig)
 {
-    SpiceChannelPrivate  *c = SPICE_CHANNEL(mig->dst_channel)->priv;
+    SpiceChannelPrivate *c = SPICE_CHANNEL(mig->dst_channel)->priv;
 
     g_return_val_if_fail(c->channel_type == SPICE_CHANNEL_MAIN, FALSE);
     g_return_val_if_fail(c->state == SPICE_CHANNEL_STATE_MIGRATION_HANDSHAKE, FALSE);
@@ -2410,13 +2526,16 @@ static gboolean migrate_connect(spice_migrate *mig)
                 info->host_size, info->host_data, info->port, info->sport);
     port = info->port;
     sport = info->sport;
-    host = (char*)info->host_data;
+    host = (char *)info->host_data;
 
     if (info->cert_subject_data == NULL ||
-        strlen((const char*)info->cert_subject_data) == 0) {
+        strlen((const char *)info->cert_subject_data) == 0)
+    {
         /* only verify hostname if no cert subject */
         g_object_set(mig->session, "verify", SPICE_SESSION_VERIFY_HOSTNAME, NULL);
-    } else {
+    }
+    else
+    {
         // session data are already copied
         g_object_set(mig->session,
                      "cert-subject", info->cert_subject_data,
@@ -2459,12 +2578,14 @@ static void main_migrate_connect(SpiceChannel *channel,
     mig->ref_count = 1;
     mig->src_channel = channel;
     mig->info = *dst_info;
-    if (dst_info->host_data) {
-        mig->info.host_data = (void *) g_strndup((char*) dst_info->host_data, dst_info->host_size);
+    if (dst_info->host_data)
+    {
+        mig->info.host_data = (void *)g_strndup((char *)dst_info->host_data, dst_info->host_size);
     }
-    if (dst_info->cert_subject_data) {
-        mig->info.cert_subject_data = (void *) g_strndup((char*) dst_info->cert_subject_data,
-                                                         dst_info->cert_subject_size);
+    if (dst_info->cert_subject_data)
+    {
+        mig->info.cert_subject_data = (void *)g_strndup((char *)dst_info->cert_subject_data,
+                                                        dst_info->cert_subject_size);
     }
     mig->from = coroutine_self();
     mig->do_seamless = do_seamless;
@@ -2473,10 +2594,12 @@ static void main_migrate_connect(SpiceChannel *channel,
     CHANNEL_DEBUG(channel, "migrate connect");
     session = spice_channel_get_session(channel);
     mig->session = spice_session_new_from_session(session);
-    if (mig->session == NULL) {
+    if (mig->session == NULL)
+    {
         goto end;
     }
-    if (!spice_session_set_migration_session(session, mig->session)) {
+    if (!spice_session_set_migration_session(session, mig->session))
+    {
         goto end;
     }
 
@@ -2489,14 +2612,20 @@ static void main_migrate_connect(SpiceChannel *channel,
     /* switch to main loop and wait for connections */
     coroutine_yield(NULL);
 
-    if (mig->nchannels != 0) {
+    if (mig->nchannels != 0)
+    {
         CHANNEL_DEBUG(channel, "migrate failed: some channels failed to connect");
         spice_session_abort_migration(session);
-    } else {
-        if (mig->do_seamless) {
+    }
+    else
+    {
+        if (mig->do_seamless)
+        {
             SPICE_DEBUG("migration (seamless): connections all ok");
             reply_type = SPICE_MSGC_MAIN_MIGRATE_CONNECTED_SEAMLESS;
-        } else {
+        }
+        else
+        {
             SPICE_DEBUG("migration (semi-seamless): connections all ok");
             reply_type = SPICE_MSGC_MAIN_MIGRATE_CONNECTED;
         }
@@ -2532,7 +2661,7 @@ static void main_handle_migrate_begin_seamless(SpiceChannel *channel, SpiceMsgIn
 
 static void main_handle_migrate_dst_seamless_ack(SpiceChannel *channel, SpiceMsgIn *in)
 {
-    SpiceChannelPrivate  *c = SPICE_CHANNEL(channel)->priv;
+    SpiceChannelPrivate *c = SPICE_CHANNEL(channel)->priv;
     SpiceMainChannelPrivate *main_priv = SPICE_MAIN_CHANNEL(channel)->priv;
 
     CHANNEL_DEBUG(channel, "migration message: migrate-dst-seamless-ack");
@@ -2544,7 +2673,7 @@ static void main_handle_migrate_dst_seamless_ack(SpiceChannel *channel, SpiceMsg
 
 static void main_handle_migrate_dst_seamless_nack(SpiceChannel *channel, SpiceMsgIn *in)
 {
-    SpiceChannelPrivate  *c = SPICE_CHANNEL(channel)->priv;
+    SpiceChannelPrivate *c = SPICE_CHANNEL(channel)->priv;
     SpiceMainChannelPrivate *main_priv = SPICE_MAIN_CHANNEL(channel)->priv;
 
     CHANNEL_DEBUG(channel, "migration message: migrate-dst-seamless-nack");
@@ -2578,7 +2707,7 @@ static void main_handle_migrate_end(SpiceChannel *channel, SpiceMsgIn *in)
     g_return_if_fail(c->migrate_delayed_id == 0);
     g_return_if_fail(spice_channel_test_capability(channel, SPICE_MAIN_CAP_SEMI_SEAMLESS_MIGRATE));
 
-    c->migrate_delayed_id = g_idle_add(migrate_delayed, channel);
+    c->migrate_delayed_id = g_spice_idle_add(migrate_delayed, channel);
 }
 
 /* main context */
@@ -2612,7 +2741,8 @@ static void main_handle_migrate_switch_host(SpiceChannel *channel, SpiceMsgIn *i
 
     g_return_if_fail(host[mig->host_size - 1] == '\0');
 
-    if (mig->cert_subject_size) {
+    if (mig->cert_subject_size)
+    {
         subject = (char *)mig->cert_subject_data;
         g_return_if_fail(subject[mig->cert_subject_size - 1] == '\0');
     }
@@ -2620,9 +2750,10 @@ static void main_handle_migrate_switch_host(SpiceChannel *channel, SpiceMsgIn *i
     SPICE_DEBUG("migrate_switch %s %d %d %s",
                 host, mig->port, mig->sport, subject);
 
-    if (c->switch_host_delayed_id != 0) {
+    if (c->switch_host_delayed_id != 0)
+    {
         g_warning("Switching host already in progress, aborting it");
-        g_warn_if_fail(g_source_remove(c->switch_host_delayed_id));
+        g_warn_if_fail(g_spice_source_remove(c->switch_host_delayed_id));
         c->switch_host_delayed_id = 0;
     }
 
@@ -2635,7 +2766,7 @@ static void main_handle_migrate_switch_host(SpiceChannel *channel, SpiceMsgIn *i
     spice_session_set_port(session, mig->port, FALSE);
     spice_session_set_port(session, mig->sport, TRUE);
 
-    c->switch_host_delayed_id = g_idle_add(switch_host_delayed, channel);
+    c->switch_host_delayed_id = g_spice_idle_add(switch_host_delayed, channel);
 }
 
 /* coroutine context */
@@ -2653,26 +2784,26 @@ static void main_handle_migrate_cancel(SpiceChannel *channel,
 static void channel_set_handlers(SpiceChannelClass *klass)
 {
     static const spice_msg_handler handlers[] = {
-        [ SPICE_MSG_MAIN_INIT ]                = main_handle_init,
-        [ SPICE_MSG_MAIN_NAME ]                = main_handle_name,
-        [ SPICE_MSG_MAIN_UUID ]                = main_handle_uuid,
-        [ SPICE_MSG_MAIN_CHANNELS_LIST ]       = main_handle_channels_list,
-        [ SPICE_MSG_MAIN_MOUSE_MODE ]          = main_handle_mouse_mode,
-        [ SPICE_MSG_MAIN_MULTI_MEDIA_TIME ]    = main_handle_mm_time,
+        [SPICE_MSG_MAIN_INIT] = main_handle_init,
+        [SPICE_MSG_MAIN_NAME] = main_handle_name,
+        [SPICE_MSG_MAIN_UUID] = main_handle_uuid,
+        [SPICE_MSG_MAIN_CHANNELS_LIST] = main_handle_channels_list,
+        [SPICE_MSG_MAIN_MOUSE_MODE] = main_handle_mouse_mode,
+        [SPICE_MSG_MAIN_MULTI_MEDIA_TIME] = main_handle_mm_time,
 
-        [ SPICE_MSG_MAIN_AGENT_CONNECTED ]     = main_handle_agent_connected,
-        [ SPICE_MSG_MAIN_AGENT_DISCONNECTED ]  = main_handle_agent_disconnected,
-        [ SPICE_MSG_MAIN_AGENT_DATA ]          = main_handle_agent_data,
-        [ SPICE_MSG_MAIN_AGENT_TOKEN ]         = main_handle_agent_token,
+        [SPICE_MSG_MAIN_AGENT_CONNECTED] = main_handle_agent_connected,
+        [SPICE_MSG_MAIN_AGENT_DISCONNECTED] = main_handle_agent_disconnected,
+        [SPICE_MSG_MAIN_AGENT_DATA] = main_handle_agent_data,
+        [SPICE_MSG_MAIN_AGENT_TOKEN] = main_handle_agent_token,
 
-        [ SPICE_MSG_MAIN_MIGRATE_BEGIN ]       = main_handle_migrate_begin,
-        [ SPICE_MSG_MAIN_MIGRATE_END ]         = main_handle_migrate_end,
-        [ SPICE_MSG_MAIN_MIGRATE_CANCEL ]      = main_handle_migrate_cancel,
-        [ SPICE_MSG_MAIN_MIGRATE_SWITCH_HOST ] = main_handle_migrate_switch_host,
-        [ SPICE_MSG_MAIN_AGENT_CONNECTED_TOKENS ]   = main_handle_agent_connected_tokens,
-        [ SPICE_MSG_MAIN_MIGRATE_BEGIN_SEAMLESS ]   = main_handle_migrate_begin_seamless,
-        [ SPICE_MSG_MAIN_MIGRATE_DST_SEAMLESS_ACK]  = main_handle_migrate_dst_seamless_ack,
-        [ SPICE_MSG_MAIN_MIGRATE_DST_SEAMLESS_NACK] = main_handle_migrate_dst_seamless_nack,
+        [SPICE_MSG_MAIN_MIGRATE_BEGIN] = main_handle_migrate_begin,
+        [SPICE_MSG_MAIN_MIGRATE_END] = main_handle_migrate_end,
+        [SPICE_MSG_MAIN_MIGRATE_CANCEL] = main_handle_migrate_cancel,
+        [SPICE_MSG_MAIN_MIGRATE_SWITCH_HOST] = main_handle_migrate_switch_host,
+        [SPICE_MSG_MAIN_AGENT_CONNECTED_TOKENS] = main_handle_agent_connected_tokens,
+        [SPICE_MSG_MAIN_MIGRATE_BEGIN_SEAMLESS] = main_handle_migrate_begin_seamless,
+        [SPICE_MSG_MAIN_MIGRATE_DST_SEAMLESS_ACK] = main_handle_migrate_dst_seamless_ack,
+        [SPICE_MSG_MAIN_MIGRATE_DST_SEAMLESS_NACK] = main_handle_migrate_dst_seamless_nack,
     };
 
     spice_channel_set_handlers(klass, handlers, G_N_ELEMENTS(handlers));
@@ -2687,11 +2818,14 @@ static void spice_main_handle_msg(SpiceChannel *channel, SpiceMsgIn *msg)
 
     parent_class = SPICE_CHANNEL_CLASS(spice_main_channel_parent_class);
 
-    if (c->state == SPICE_CHANNEL_STATE_MIGRATION_HANDSHAKE) {
+    if (c->state == SPICE_CHANNEL_STATE_MIGRATION_HANDSHAKE)
+    {
         if (type != SPICE_MSG_MAIN_MIGRATE_DST_SEAMLESS_ACK &&
-            type != SPICE_MSG_MAIN_MIGRATE_DST_SEAMLESS_NACK) {
+            type != SPICE_MSG_MAIN_MIGRATE_DST_SEAMLESS_NACK)
+        {
             g_critical("unexpected msg (%d)."
-                       "Only MIGRATE_DST_SEAMLESS_ACK/NACK are allowed", type);
+                       "Only MIGRATE_DST_SEAMLESS_ACK/NACK are allowed",
+                       type);
             return;
         }
     }
@@ -2764,13 +2898,15 @@ update_display_config(SpiceMainChannel *channel, int id, SpiceDisplayConfig *con
 {
     SpiceMainChannelPrivate *c = channel->priv;
 
-    if (memcmp(config, &c->display[id], sizeof(SpiceDisplayConfig)) == 0) {
+    if (memcmp(config, &c->display[id], sizeof(SpiceDisplayConfig)) == 0)
+    {
         return;
     }
 
     c->display[id] = *config;
 
-    if (update) {
+    if (update)
+    {
         update_display_timer(channel, 1);
     }
 }
@@ -2811,7 +2947,10 @@ void spice_main_channel_update_display(SpiceMainChannel *channel, int id, int x,
     g_return_if_fail(id >= 0 && id < SPICE_N_ELEMENTS(c->display));
 
     SpiceDisplayConfig config = {
-        .x = x, .y = y, .width = width, .height = height,
+        .x = x,
+        .y = y,
+        .width = width,
+        .height = height,
         .width_mm = c->display[id].width_mm,
         .height_mm = c->display[id].height_mm,
         .display_state = c->display[id].display_state,
@@ -3036,7 +3175,7 @@ void spice_main_clipboard_selection_notify(SpiceMainChannel *channel, guint sele
  * Since: 0.35
  **/
 void spice_main_channel_clipboard_selection_notify(SpiceMainChannel *channel, guint selection,
-                                           guint32 type, const guchar *data, size_t size)
+                                                   guint32 type, const guchar *data, size_t size)
 {
     g_return_if_fail(channel != NULL);
     g_return_if_fail(SPICE_IS_MAIN_CHANNEL(channel));
@@ -3152,12 +3291,16 @@ void spice_main_channel_update_display_enabled(SpiceMainChannel *channel, int id
 
     SpiceMainChannelPrivate *c = channel->priv;
 
-    if (id == -1) {
+    if (id == -1)
+    {
         gint i;
-        for (i = 0; i < G_N_ELEMENTS(c->display); i++) {
+        for (i = 0; i < G_N_ELEMENTS(c->display); i++)
+        {
             c->display[i].display_state = display_state;
         }
-    } else {
+    }
+    else
+    {
         g_return_if_fail(id >= 0 && id < G_N_ELEMENTS(c->display));
         if (c->display[id].display_state == display_state)
             return;
@@ -3244,7 +3387,8 @@ static void file_transfer_operation_free(FileTransferOperation *xfer_op)
 {
     g_return_if_fail(xfer_op != NULL);
 
-    if (xfer_op->stats.failed != 0) {
+    if (xfer_op->stats.failed != 0)
+    {
         GError *error = g_error_new(SPICE_CLIENT_ERROR,
                                     SPICE_CLIENT_ERROR_FAILED,
                                     "Transferring %u files: %u succeed, %u cancelled, %u failed",
@@ -3254,7 +3398,9 @@ static void file_transfer_operation_free(FileTransferOperation *xfer_op)
                                     xfer_op->stats.failed);
         SPICE_DEBUG("Transfer failed (%p) %s", xfer_op, error->message);
         g_task_return_error(xfer_op->task, error);
-    } else if (xfer_op->stats.cancelled != 0 && xfer_op->stats.succeed == 0) {
+    }
+    else if (xfer_op->stats.cancelled != 0 && xfer_op->stats.succeed == 0)
+    {
         GError *error = g_error_new(G_IO_ERROR,
                                     G_IO_ERROR_CANCELLED,
                                     "Transferring %u files: %u succeed, %u cancelled, %u failed",
@@ -3264,7 +3410,9 @@ static void file_transfer_operation_free(FileTransferOperation *xfer_op)
                                     xfer_op->stats.failed);
         SPICE_DEBUG("Transfer cancelled (%p) %s", xfer_op, error->message);
         g_task_return_error(xfer_op->task, error);
-    } else {
+    }
+    else
+    {
         SPICE_DEBUG("Transfer successful (%p)", xfer_op);
         g_task_return_boolean(xfer_op->task, TRUE);
     }
@@ -3281,7 +3429,8 @@ static void spice_main_channel_reset_all_xfer_operations(SpiceMainChannel *chann
 
     /* Mark each of SpiceFileTransferTask as completed due error */
     keys = g_hash_table_get_keys(channel->priv->file_xfer_tasks);
-    for (it = keys; it != NULL; it = it->next) {
+    for (it = keys; it != NULL; it = it->next)
+    {
         FileTransferOperation *xfer_op;
         SpiceFileTransferTask *xfer_task;
         GError *error;
@@ -3291,7 +3440,8 @@ static void spice_main_channel_reset_all_xfer_operations(SpiceMainChannel *chann
             continue;
 
         xfer_task = g_hash_table_lookup(xfer_op->xfer_task, it->data);
-        if (xfer_task == NULL) {
+        if (xfer_task == NULL)
+        {
             spice_warning("(reset-all) can't complete task %u - completed already?",
                           GPOINTER_TO_UINT(it->data));
             continue;
@@ -3327,12 +3477,16 @@ static void file_transfer_operation_task_finished(SpiceFileTransferTask *xfer_ta
     task_id = spice_file_transfer_task_get_id(xfer_task);
     g_return_if_fail(task_id != 0);
 
-    if (error) {
+    if (error)
+    {
         VDAgentFileXferStatusMessage msg;
         msg.id = task_id;
-        if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+        if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+        {
             msg.result = VD_AGENT_FILE_XFER_STATUS_CANCELLED;
-        } else {
+        }
+        else
+        {
             msg.result = VD_AGENT_FILE_XFER_STATUS_ERROR;
         }
         agent_msg_queue_many(channel, VD_AGENT_FILE_XFER_STATUS,
@@ -3340,14 +3494,16 @@ static void file_transfer_operation_task_finished(SpiceFileTransferTask *xfer_ta
     }
 
     xfer_op = g_hash_table_lookup(channel->priv->file_xfer_tasks, GUINT_TO_POINTER(task_id));
-    if (xfer_op == NULL) {
+    if (xfer_op == NULL)
+    {
         /* Likely the operation has ended before the remove-task was called. One
          * situation that this can easily happen is if the agent is disconnected
          * while there are pending files. */
         return;
     }
 
-    if (error) {
+    if (error)
+    {
         /* On error or cancellation of a SpiceFileTransferTask we remove the
          * remaining bytes from transfer-size in order to keep the coherence of
          * the information we provide to the user (total-sent and transfer-size)
@@ -3355,12 +3511,17 @@ static void file_transfer_operation_task_finished(SpiceFileTransferTask *xfer_ta
         guint64 file_size = spice_file_transfer_task_get_total_bytes(xfer_task);
         guint64 bytes_read = spice_file_transfer_task_get_transferred_bytes(xfer_task);
         xfer_op->stats.transfer_size -= (file_size - bytes_read);
-        if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+        if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+        {
             xfer_op->stats.cancelled++;
-        } else {
+        }
+        else
+        {
             xfer_op->stats.failed++;
         }
-    } else {
+    }
+    else
+    {
         xfer_op->stats.succeed++;
     }
 
@@ -3478,11 +3639,14 @@ void spice_main_channel_file_copy_async(SpiceMainChannel *channel,
     g_return_if_fail(sources != NULL);
 
     c = channel->priv;
-    if (!c->agent_connected) {
+    if (!c->agent_connected)
+    {
         error = g_error_new(SPICE_CLIENT_ERROR,
                             SPICE_CLIENT_ERROR_FAILED,
                             "The agent is not connected");
-    } else if (test_agent_cap(channel, VD_AGENT_CAP_FILE_XFER_DISABLED)) {
+    }
+    else if (test_agent_cap(channel, VD_AGENT_CAP_FILE_XFER_DISABLED))
+    {
         error = g_error_new(SPICE_CLIENT_ERROR,
                             SPICE_CLIENT_ERROR_FAILED,
                             _("The file transfer is disabled"));
@@ -3499,7 +3663,8 @@ void spice_main_channel_file_copy_async(SpiceMainChannel *channel,
                                                                cancellable);
     xfer_op->stats.num_files = g_hash_table_size(xfer_op->xfer_task);
     keys = g_hash_table_get_keys(xfer_op->xfer_task);
-    for (it = keys; it != NULL; it = it->next) {
+    for (it = keys; it != NULL; it = it->next)
+    {
         guint32 task_id;
         SpiceFileTransferTask *xfer_task = g_hash_table_lookup(xfer_op->xfer_task, it->data);
 
@@ -3511,11 +3676,14 @@ void spice_main_channel_file_copy_async(SpiceMainChannel *channel,
         g_signal_connect(xfer_task, "finished", G_CALLBACK(file_transfer_operation_task_finished), NULL);
         g_signal_emit(channel, signals[SPICE_MAIN_NEW_FILE_TRANSFER], 0, xfer_task);
 
-        if (error == NULL) {
+        if (error == NULL)
+        {
             spice_file_transfer_task_init_task_async(xfer_task,
                                                      file_xfer_init_task_async_cb,
                                                      xfer_op);
-        } else {
+        }
+        else
+        {
             spice_file_transfer_task_completed(xfer_task, g_error_copy(error));
         }
     }

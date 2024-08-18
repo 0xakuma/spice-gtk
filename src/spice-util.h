@@ -18,6 +18,7 @@
 #define SPICE_UTIL_H
 
 #include <glib-object.h>
+#include "spice-version.h"
 
 G_BEGIN_DECLS
 
