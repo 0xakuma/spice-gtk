@@ -907,7 +907,7 @@ static void clipboard_get(GtkClipboard *clipboard,
 
     ri.selection_data = selection_data;
     ri.info = info;
-    ri.loop = g_main_loop_new(NULL, FALSE);
+    ri.loop = g_main_loop_new(spice_util_main_context(), FALSE);
     ri.selection = selection;
     ri.self = self;
 
