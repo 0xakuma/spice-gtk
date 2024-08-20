@@ -57,8 +57,7 @@ GIOCondition g_coroutine_socket_wait(GCoroutine *self,
 
     src = g_socket_create_source(sock, cond | G_IO_HUP | G_IO_ERR | G_IO_NVAL, NULL);
     g_source_set_callback(src, (GSourceFunc)g_io_wait_helper, self, NULL);
-    GMainContext *main_context = spice_util_main_context();
-    self->wait_id = g_source_attach(src, main_context);
+    self->wait_id = g_source_attach(src, spice_util_main_context());
     ret = coroutine_yield(NULL);
     g_source_unref(src);
 

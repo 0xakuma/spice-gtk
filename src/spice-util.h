@@ -21,6 +21,7 @@
 #include "spice-version.h"
 
 G_BEGIN_DECLS
+void spice_util_set_main_context(GMainContext* main);
 
 SPICE_GTK_DEPRECATED_IN_0_43_FOR(spice_glib_set_debug)
 void spice_util_set_debug(gboolean enabled);
@@ -53,7 +54,6 @@ gulong spice_glib_signal_connect_object(gpointer instance,
                                      GConnectFlags connect_flags);
 SPICE_GTK_AVAILABLE_IN_0_43
 gchar* spice_glib_uuid_to_string(const guint8 uuid[16]);
-void spice_util_set_main_context(GMainContext* main);
 
 #define SPICE_DEBUG(fmt, ...)                                   \
     do {                                                        \

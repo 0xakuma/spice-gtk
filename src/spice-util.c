@@ -349,6 +349,20 @@ void spice_mono_edge_highlight(unsigned width, unsigned height,
 
 static GMainContext *spice_context = NULL;
 
+/**
+ * spice_util_set_main_context:
+ * @context: Main context for SPICE
+ *
+ * Main context for events and sources. This must be called first if the
+ * application uses multiple GLib based libraries. In that case, the
+ * caller is responsible for setting up a separate main context and main loop
+ * for SPICE. The context will be retained. To prevent memory leaks,
+ * spice_util_set_main_context(NULL) should be called when finished which sets
+ * the main context back to the default.
+ *
+ * Since: 0.41
+ **/
+__attribute__((visibility("default")))
 void spice_util_set_main_context(GMainContext* main) {
     if (spice_context) {
         g_main_context_unref(spice_context);
@@ -375,7 +389,7 @@ g_spice_timeout_add(guint interval,
                     GSourceFunc function,
                     gpointer data)
 {
-    return g_spice_timeout_add_full(G_PRIORITY_DEFAULT, 
+    return g_spice_timeout_add_full(G_PRIORITY_DEFAULT,
                  interval, function, data, NULL);
 }
 
